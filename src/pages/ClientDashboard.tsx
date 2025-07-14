@@ -171,7 +171,7 @@ const ClientDashboard: React.FC = () => {
                       </p>
                       {contract.status === "active" && contract.clientDeposited && contract.providerFinalized && (
                         <Button className="mt-4 w-full" onClick={() => handleCloseContract(contract)}>
-                          Cerrar Contrato
+                          Finalizar Contrato
                         </Button>
                       )}
                     </CardContent>

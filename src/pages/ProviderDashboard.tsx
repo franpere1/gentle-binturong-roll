@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import Header from "@/components/Header";
 import { MadeWithDyad } from "@/components/made-with-dyad";
 import { useAuth } from "@/context/AuthContext";
-import { useContracts } from "@/context/ContractContext"; // Importar useContracts
+import { useContracts } from "@/context/ContractContext"; // Usar useContracts
 import { Provider, Contract } from "@/types";
 import { Button } from "@/components/ui/button";
 import {
@@ -163,7 +163,7 @@ const ProviderDashboard: React.FC = () => {
                     </p>
                     {contract.status === "active" && contract.clientDeposited && !contract.providerFinalized && (
                       <Button className="mt-4 w-full" onClick={() => handleFinalizeService(contract.id)}>
-                        Marcar como Conforme
+                        Finalizar Contrato
                       </Button>
                     )}
                   </CardContent>
