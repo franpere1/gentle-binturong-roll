@@ -21,6 +21,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import ClientProfileEditor from "@/components/ClientProfileEditor";
+import ProviderContactModal from "@/components/ProviderContactModal"; // Importar el nuevo modal
 
 const ClientDashboard: React.FC = () => {
   const { currentUser, getAllProviders } = useAuth();
@@ -28,6 +29,8 @@ const ClientDashboard: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredProviders, setFilteredProviders] = useState<Provider[]>([]);
+  const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
 
   const allProviders = getAllProviders();
 
@@ -43,6 +46,11 @@ const ClientDashboard: React.FC = () => {
     );
     setFilteredProviders(results);
   }, [searchTerm, allProviders]);
+
+  const handleContactProvider = (provider: Provider) => {
+    setSelectedProvider(provider);
+    setIsContactModalOpen(true);
+  };
 
   if (!client) {
     return (
@@ -90,7 +98,7 @@ const ClientDashboard: React.FC = () => {
                     <DialogDescription>
                       Realiza cambios en tu perfil aquí. Haz clic en guardar cuando hayas terminado.
                     </DialogDescription>
-                  </DialogHeader>
+                  </DialogDescription>
                   <ClientProfileEditor
                     onSave={() => setIsEditing(false)}
                     onCancel={() => setIsEditing(false)}
@@ -151,7 +159,7 @@ const ClientDashboard: React.FC = () => {
                     <p className="mb-1 text-lg font-bold text-green-600 dark:text-green-400">
                       ${provider.rate.toFixed(2)} USD
                     </p>
-                    <Button className="mt-4 w-full">Contactar</Button>
+                    <Button className="mt-4 w-full" onClick={() => handleContactProvider(provider)}>Contactar</Button>
                   </CardContent>
                 </Card>
               ))}
@@ -159,6 +167,13 @@ const ClientDashboard: React.FC = () => {
           )}
         </div>
       </div>
+      {selectedProvider && (
+        <ProviderContactModal
+          provider={selectedProvider}
+          isOpen={isContactModalOpen}
+          onClose={() => setIsContactModalOpen(false)}
+        />
+      )}
       <MadeWithDyad />
     </div>
   );
