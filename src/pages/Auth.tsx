@@ -1,0 +1,325 @@
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
+import { VENEZUELAN_STATES } from "@/constants/venezuelanStates";
+import { ServiceCategory } from "@/types";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import Header from "@/components/Header";
+import { MadeWithDyad } from "@/components/made-with-dyad";
+import { showError } from "@/utils/toast";
+
+const Auth: React.FC = () => {
+  const [activeTab, setActiveTab] = useState("login");
+
+  return (
+    <div className="min-h-screen flex flex-col">
+      <Header />
+      <div className="flex-grow flex items-center justify-center bg-gray-100 dark:bg-gray-900 p-4">
+        <div className="w-full max-w-md bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md">
+          <h2 className="text-2xl font-bold text-center mb-6 text-gray-800 dark:text-gray-100">
+            Bienvenido a TE LO HAGO
+          </h2>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="login">Iniciar Sesión</TabsTrigger>
+              <TabsTrigger value="client-register">Cliente</TabsTrigger>
+              <TabsTrigger value="provider-register">Proveedor</TabsTrigger>
+            </TabsList>
+            <TabsContent value="login">
+              <LoginForm />
+            </TabsContent>
+            <TabsContent value="client-register">
+              <ClientRegistrationForm />
+            </TabsContent>
+            <TabsContent value="provider-register">
+              <ProviderRegistrationForm />
+            </TabsContent>
+          </Tabs>
+        </div>
+      </div>
+      <MadeWithDyad />
+    </div>
+  );
+};
+
+const LoginForm: React.FC = () => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const { login, findUserByEmail } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const user = findUserByEmail(email);
+    if (user && user.password === password) {
+      login(user);
+      if (user.type === "client") {
+        navigate("/client-dashboard");
+      } else {
+        navigate("/provider-dashboard");
+      }
+    } else {
+      showError("Credenciales incorrectas.");
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+      <div>
+        <Label htmlFor="login-email">Correo Electrónico</Label>
+        <Input
+          id="login-email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
+      </div>
+      <div>
+        <Label htmlFor="login-password">Contraseña</Label>
+        <Input
+          id="login-password"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+        />
+      </div>
+      <Button type="submit" className="w-full">
+        Iniciar Sesión
+      </Button>
+    </form>
+  );
+};
+
+const ClientRegistrationForm: React.FC = () => {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [state, setState] = useState("");
+  const [password, setPassword] = useState("");
+  const { registerClient } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (registerClient({ id: "", name, email, state, password, type: "client" })) {
+      navigate("/auth"); // Redirect to login after successful registration
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+      <div>
+        <Label htmlFor="client-name">Nombre</Label>
+        <Input
+          id="client-name"
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+        />
+      </div>
+      <div>
+        <Label htmlFor="client-email">Correo Electrónico</Label>
+        <Input
+          id="client-email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
+      </div>
+      <div>
+        <Label htmlFor="client-state">Estado</Label>
+        <Select value={state} onValueChange={setState} required>
+          <SelectTrigger id="client-state">
+            <SelectValue placeholder="Selecciona un estado" />
+          </SelectTrigger>
+          <SelectContent>
+            {VENEZUELAN_STATES.map((s) => (
+              <SelectItem key={s} value={s}>
+                {s}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div>
+        <Label htmlFor="client-password">Contraseña</Label>
+        <Input
+          id="client-password"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+        />
+      </div>
+      <Button type="submit" className="w-full">
+        Registrar Cliente
+      </Button>
+    </form>
+  );
+};
+
+const ProviderRegistrationForm: React.FC = () => {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [state, setState] = useState("");
+  const [category, setCategory] = useState<ServiceCategory | "">("");
+  const [serviceTitle, setServiceTitle] = useState("");
+  const [serviceDescription, setServiceDescription] = useState("");
+  const [serviceImage, setServiceImage] = useState(""); // For demo, just a URL/text
+  const { registerProvider } = useAuth();
+  const navigate = useNavigate();
+
+  const serviceCategories: ServiceCategory[] = [
+    "Plomería",
+    "Construcción",
+    "Cerrajería",
+    "Limpieza",
+    "Mecánico",
+    "Electricista",
+    "Servicios digitales",
+  ];
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!category) {
+      showError("Por favor, selecciona una categoría de servicio.");
+      return;
+    }
+    if (serviceDescription.split(" ").length > 5) {
+      showError("La descripción breve no debe exceder las 5 palabras.");
+      return;
+    }
+
+    if (
+      registerProvider({
+        id: "",
+        name,
+        email,
+        state,
+        password,
+        type: "provider",
+        category: category as ServiceCategory,
+        serviceTitle,
+        serviceDescription,
+        serviceImage,
+      })
+    ) {
+      navigate("/auth"); // Redirect to login after successful registration
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+      <div>
+        <Label htmlFor="provider-name">Nombre</Label>
+        <Input
+          id="provider-name"
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+        />
+      </div>
+      <div>
+        <Label htmlFor="provider-email">Correo Electrónico</Label>
+        <Input
+          id="provider-email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
+      </div>
+      <div>
+        <Label htmlFor="provider-state">Estado</Label>
+        <Select value={state} onValueChange={setState} required>
+          <SelectTrigger id="provider-state">
+            <SelectValue placeholder="Selecciona un estado" />
+          </SelectTrigger>
+          <SelectContent>
+            {VENEZUELAN_STATES.map((s) => (
+              <SelectItem key={s} value={s}>
+                {s}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div>
+        <Label htmlFor="provider-category">Categoría del Servicio</Label>
+        <Select value={category} onValueChange={(value) => setCategory(value as ServiceCategory)} required>
+          <SelectTrigger id="provider-category">
+            <SelectValue placeholder="Selecciona una categoría" />
+          </SelectTrigger>
+          <SelectContent>
+            {serviceCategories.map((cat) => (
+              <SelectItem key={cat} value={cat}>
+                {cat}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div>
+        <Label htmlFor="provider-service-title">Título del Servicio</Label>
+        <Input
+          id="provider-service-title"
+          type="text"
+          value={serviceTitle}
+          onChange={(e) => setServiceTitle(e.target.value)}
+          placeholder="Ej: Plomero a domicilio"
+          required
+        />
+      </div>
+      <div>
+        <Label htmlFor="provider-service-description">Descripción Breve (máx. 5 palabras)</Label>
+        <Textarea
+          id="provider-service-description"
+          value={serviceDescription}
+          onChange={(e) => setServiceDescription(e.target.value)}
+          maxLength={50} // A bit more than 5 words to allow for longer words, but still brief
+          required
+        />
+      </div>
+      <div>
+        <Label htmlFor="provider-service-image">URL de Imagen de Servicio (opcional)</Label>
+        <Input
+          id="provider-service-image"
+          type="text"
+          value={serviceImage}
+          onChange={(e) => setServiceImage(e.target.value)}
+          placeholder="Ej: https://ejemplo.com/imagen.jpg"
+        />
+      </div>
+      <div>
+        <Label htmlFor="provider-password">Contraseña</Label>
+        <Input
+          id="provider-password"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+        />
+      </div>
+      <Button type="submit" className="w-full">
+        Registrar Proveedor
+      </Button>
+    </form>
+  );
+};
+
+export default Auth;
