@@ -98,7 +98,7 @@ const ClientDashboard: React.FC = () => {
                     <DialogDescription>
                       Realiza cambios en tu perfil aquí. Haz clic en guardar cuando hayas terminado.
                     </DialogDescription>
-                  </DialogDescription>
+                  </DialogHeader>
                   <ClientProfileEditor
                     onSave={() => setIsEditing(false)}
                     onCancel={() => setIsEditing(false)}
