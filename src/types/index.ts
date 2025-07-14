@@ -40,6 +40,8 @@ export interface Contract {
   id: string;
   clientId: string;
   providerId: string;
+  serviceTitle: string; // Título del servicio contratado
+  serviceRate: number;  // Tarifa del servicio contratado
   status: "pending" | "active" | "finalized" | "cancelled";
   clientDeposited: boolean;
   providerFinalized: boolean;
