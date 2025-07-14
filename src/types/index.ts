@@ -25,6 +25,7 @@ export interface Provider extends User {
   serviceTitle: string;
   serviceDescription: string;
   serviceImage?: string; // Base64 string or URL for demo
+  rate: number; // Nuevo campo para la tarifa del servicio
 }
 
 export interface Message {

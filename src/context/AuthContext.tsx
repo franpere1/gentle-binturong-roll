@@ -15,6 +15,7 @@ interface AuthContextType {
   registerClient: (client: Client) => boolean;
   registerProvider: (provider: Provider) => boolean;
   findUserByEmail: (email: string) => User | undefined;
+  updateUser: (user: User) => void; // Nueva función para actualizar usuarios
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -72,6 +73,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return true;
   };
 
+  const updateUser = (updatedUser: User) => {
+    setUsers((prevUsers) =>
+      prevUsers.map((user) =>
+        user.id === updatedUser.id ? updatedUser : user
+      )
+    );
+    // If the updated user is the current logged-in user, update currentUser state
+    if (currentUser && currentUser.id === updatedUser.id) {
+      setCurrentUser(updatedUser);
+    }
+    showSuccess("Información actualizada correctamente.");
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -81,6 +95,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         registerClient,
         registerProvider,
         findUserByEmail,
+        updateUser, // Añadir updateUser al contexto
       }}
     >
       {children}

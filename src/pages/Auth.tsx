@@ -180,7 +180,8 @@ const ProviderRegistrationForm: React.FC = () => {
   const [serviceTitle, setServiceTitle] = useState("");
   const [serviceDescription, setServiceDescription] = useState("");
   const [serviceImage, setServiceImage] = useState(""); // For demo, just a URL/text
-  const [password, setPassword] = useState(""); // Added missing password state
+  const [password, setPassword] = useState("");
+  const [rate, setRate] = useState<number | ''>(''); // Nuevo estado para la tarifa
   const { registerProvider } = useAuth();
   const navigate = useNavigate();
 
@@ -204,6 +205,10 @@ const ProviderRegistrationForm: React.FC = () => {
       showError("La descripción breve no debe exceder las 5 palabras.");
       return;
     }
+    if (rate === '' || isNaN(Number(rate)) || Number(rate) < 0) {
+      showError("Por favor, introduce una tarifa válida.");
+      return;
+    }
 
     if (
       registerProvider({
@@ -217,6 +222,7 @@ const ProviderRegistrationForm: React.FC = () => {
         serviceTitle,
         serviceDescription,
         serviceImage,
+        rate: Number(rate), // Incluir la tarifa
       })
     ) {
       navigate("/auth"); // Redirect to login after successful registration
@@ -304,6 +310,19 @@ const ProviderRegistrationForm: React.FC = () => {
           value={serviceImage}
           onChange={(e) => setServiceImage(e.target.value)}
           placeholder="Ej: https://ejemplo.com/imagen.jpg"
+        />
+      </div>
+      <div>
+        <Label htmlFor="provider-rate">Tarifa por Servicio (USD)</Label>
+        <Input
+          id="provider-rate"
+          type="number"
+          value={rate}
+          onChange={(e) => setRate(parseFloat(e.target.value) || '')}
+          placeholder="Ej: 50"
+          required
+          min="0"
+          step="0.01"
         />
       </div>
       <div>
