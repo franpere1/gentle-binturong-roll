@@ -26,17 +26,31 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>(() => {
     // Load users from local storage on initial load
     const storedUsers = localStorage.getItem("appUsers");
     return storedUsers ? JSON.parse(storedUsers) : [];
   });
 
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+    // Load current user from local storage on initial load
+    const storedCurrentUser = localStorage.getItem("currentUser");
+    return storedCurrentUser ? JSON.parse(storedCurrentUser) : null;
+  });
+
   useEffect(() => {
     // Save users to local storage whenever the users state changes
     localStorage.setItem("appUsers", JSON.stringify(users));
   }, [users]);
+
+  useEffect(() => {
+    // Save current user to local storage whenever currentUser state changes
+    if (currentUser) {
+      localStorage.setItem("currentUser", JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem("currentUser");
+    }
+  }, [currentUser]);
 
   const findUserByEmail = (email: string) => {
     return users.find((user) => user.email === email);
