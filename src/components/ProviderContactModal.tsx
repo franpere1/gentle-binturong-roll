@@ -26,10 +26,13 @@ const ProviderContactModal: React.FC<ProviderContactModalProps> = ({
   onClose,
 }) => {
   const { currentUser } = useAuth();
-  const { createContract, depositFunds } = useContracts();
+  const { createContract, depositFunds, hasActiveOrPendingContract } = useContracts();
   const [contractCreated, setContractCreated] = useState(false);
   const [currentContractId, setCurrentContractId] = useState<string | null>(null);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false); // Nuevo estado para el modal de pago
+
+  const isClient = currentUser && currentUser.type === "client";
+  const clientHasExistingContract = isClient && hasActiveOrPendingContract(currentUser.id, provider.id);
 
   const handleContractService = () => {
     if (!currentUser) {
@@ -114,8 +117,12 @@ const ProviderContactModal: React.FC<ProviderContactModalProps> = ({
               <ChatWindow otherUser={provider} />
             </div>
             <div className="mt-4">
-              {!contractCreated ? (
-                <Button className="w-full" onClick={handleContractService}>
+              {isClient && clientHasExistingContract ? (
+                <p className="text-center text-red-500 dark:text-red-400 font-semibold">
+                  Ya tienes un contrato pendiente o activo con este proveedor.
+                </p>
+              ) : !contractCreated ? (
+                <Button className="w-full" onClick={handleContractService} disabled={!isClient}>
                   Contratar Servicio
                 </Button>
               ) : (

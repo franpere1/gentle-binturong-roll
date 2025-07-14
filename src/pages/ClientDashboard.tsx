@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/card";
 import ClientProfileEditor from "@/components/ClientProfileEditor";
 import ProviderContactModal from "@/components/ProviderContactModal";
+import ContractCompletionModal from "@/components/ContractCompletionModal"; // Importar el nuevo modal
 
 const ClientDashboard: React.FC = () => {
   const { currentUser, getAllProviders } = useAuth();
@@ -33,6 +34,8 @@ const ClientDashboard: React.FC = () => {
   const [filteredProviders, setFilteredProviders] = useState<Provider[]>([]);
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
+  const [isCompletionModalOpen, setIsCompletionModalOpen] = useState(false); // Nuevo estado para el modal de finalización
+  const [contractToFinalize, setContractToFinalize] = useState<Contract | null>(null); // Estado para el contrato a finalizar
 
   const allProviders = getAllProviders();
   const clientContracts = client ? getContractsForUser(client.id) : [];
@@ -55,8 +58,9 @@ const ClientDashboard: React.FC = () => {
     setIsContactModalOpen(true);
   };
 
-  const handleConfirmCompletion = (contractId: string) => {
-    releaseFunds(contractId);
+  const handleCloseContract = (contract: Contract) => {
+    setContractToFinalize(contract);
+    setIsCompletionModalOpen(true);
   };
 
   if (!client) {
@@ -166,8 +170,8 @@ const ClientDashboard: React.FC = () => {
                         {contract.providerFinalized ? "Sí" : "No"}
                       </p>
                       {contract.status === "active" && contract.clientDeposited && contract.providerFinalized && (
-                        <Button className="mt-4 w-full" onClick={() => handleConfirmCompletion(contract.id)}>
-                          Marcar como Conforme y Liberar Fondos
+                        <Button className="mt-4 w-full" onClick={() => handleCloseContract(contract)}>
+                          Cerrar Contrato
                         </Button>
                       )}
                     </CardContent>
@@ -241,6 +245,14 @@ const ClientDashboard: React.FC = () => {
           provider={selectedProvider}
           isOpen={isContactModalOpen}
           onClose={() => setIsContactModalOpen(false)}
+        />
+      )}
+      {contractToFinalize && (
+        <ContractCompletionModal
+          isOpen={isCompletionModalOpen}
+          onClose={() => setIsCompletionModalOpen(false)}
+          contract={contractToFinalize}
+          providerName={allProviders.find(p => p.id === contractToFinalize.providerId)?.name || "Desconocido"}
         />
       )}
       <MadeWithDyad />

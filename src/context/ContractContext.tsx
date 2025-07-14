@@ -15,6 +15,7 @@ interface ContractContextType {
   finalizeContractByProvider: (contractId: string) => boolean;
   releaseFunds: (contractId: string) => boolean;
   getContractsForUser: (userId: string) => Contract[];
+  hasActiveOrPendingContract: (clientId: string, providerId: string) => boolean; // Nueva función
 }
 
 const ContractContext = createContext<ContractContextType | undefined>(undefined);
@@ -34,6 +35,15 @@ export const ContractProvider: React.FC<ContractProviderProps> = ({ children }) 
     localStorage.setItem("appContracts", JSON.stringify(contracts));
   }, [contracts]);
 
+  const hasActiveOrPendingContract = (clientId: string, providerId: string): boolean => {
+    return contracts.some(
+      (contract) =>
+        contract.clientId === clientId &&
+        contract.providerId === providerId &&
+        (contract.status === "pending" || contract.status === "active")
+    );
+  };
+
   const createContract = (
     clientId: string,
     providerId: string,
@@ -42,6 +52,10 @@ export const ContractProvider: React.FC<ContractProviderProps> = ({ children }) 
   ): Contract | null => {
     if (!currentUser || currentUser.id !== clientId) {
       showError("Solo el cliente puede crear un contrato.");
+      return null;
+    }
+    if (hasActiveOrPendingContract(clientId, providerId)) {
+      showError("Ya tienes un contrato pendiente o activo con este proveedor.");
       return null;
     }
 
@@ -130,6 +144,7 @@ export const ContractProvider: React.FC<ContractProviderProps> = ({ children }) 
         finalizeContractByProvider,
         releaseFunds,
         getContractsForUser,
+        hasActiveOrPendingContract,
       }}
     >
       {children}
