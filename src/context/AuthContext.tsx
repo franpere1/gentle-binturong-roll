@@ -15,7 +15,8 @@ interface AuthContextType {
   registerClient: (client: Client) => boolean;
   registerProvider: (provider: Provider) => boolean;
   findUserByEmail: (email: string) => User | undefined;
-  updateUser: (user: User) => void; // Nueva función para actualizar usuarios
+  updateUser: (user: User) => void;
+  getAllProviders: () => Provider[]; // Nueva función para obtener todos los proveedores
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -86,6 +87,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     showSuccess("Información actualizada correctamente.");
   };
 
+  const getAllProviders = (): Provider[] => {
+    return users.filter((user) => user.type === "provider") as Provider[];
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -95,7 +100,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         registerClient,
         registerProvider,
         findUserByEmail,
-        updateUser, // Añadir updateUser al contexto
+        updateUser,
+        getAllProviders, // Añadir getAllProviders al contexto
       }}
     >
       {children}
