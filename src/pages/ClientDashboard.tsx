@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import { MadeWithDyad } from "@/components/made-with-dyad";
 import { useAuth } from "@/context/AuthContext";
-import { useContracts } from "@/context/ContractContext"; // Importar useContracts
+import { useContracts } from "@/context/ContractContext";
 import { Client, Provider, Contract } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,7 +26,7 @@ import ProviderContactModal from "@/components/ProviderContactModal";
 
 const ClientDashboard: React.FC = () => {
   const { currentUser, getAllProviders } = useAuth();
-  const { getContractsForUser, releaseFunds } = useContracts(); // Usar useContracts
+  const { getContractsForUser, releaseFunds } = useContracts();
   const client = currentUser as Client;
   const [isEditing, setIsEditing] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -124,50 +124,56 @@ const ClientDashboard: React.FC = () => {
             </p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {clientContracts.map((contract) => (
-                <Card key={contract.id} className="flex flex-col">
-                  <CardHeader>
-                    <CardTitle>{contract.serviceTitle}</CardTitle>
-                    <CardDescription>
-                      Estado:{" "}
-                      <span
-                        className={`font-semibold ${
-                          contract.status === "pending"
-                            ? "text-yellow-600"
-                            : contract.status === "active"
-                            ? "text-blue-600"
-                            : contract.status === "finalized"
-                            ? "text-green-600"
-                            : "text-red-600"
-                        }`}
-                      >
-                        {contract.status === "pending" && "Pendiente de pago"}
-                        {contract.status === "active" && "Activo"}
-                        {contract.status === "finalized" && "Finalizado"}
-                        {contract.status === "cancelled" && "Cancelado"}
-                      </span>
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="flex-grow">
-                    <p className="mb-1">
-                      <span className="font-medium">Tarifa:</span> ${contract.serviceRate.toFixed(2)} USD
-                    </p>
-                    <p className="mb-1">
-                      <span className="font-medium">Depósito Cliente:</span>{" "}
-                      {contract.clientDeposited ? "Sí" : "No"}
-                    </p>
-                    <p className="mb-1">
-                      <span className="font-medium">Proveedor Finalizó:</span>{" "}
-                      {contract.providerFinalized ? "Sí" : "No"}
-                    </p>
-                    {contract.status === "active" && contract.clientDeposited && contract.providerFinalized && (
-                      <Button className="mt-4 w-full" onClick={() => handleConfirmCompletion(contract.id)}>
-                        Marcar como Conforme y Liberar Fondos
-                      </Button>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
+              {clientContracts.map((contract) => {
+                const provider = allProviders.find(p => p.id === contract.providerId);
+                return (
+                  <Card key={contract.id} className="flex flex-col">
+                    <CardHeader>
+                      <CardTitle>{contract.serviceTitle}</CardTitle>
+                      <CardDescription>
+                        <span className="font-medium">Proveedor:</span> {provider ? provider.name : "Desconocido"}
+                      </CardDescription>
+                      <CardDescription>
+                        Estado:{" "}
+                        <span
+                          className={`font-semibold ${
+                            contract.status === "pending"
+                              ? "text-yellow-600"
+                              : contract.status === "active"
+                              ? "text-blue-600"
+                              : contract.status === "finalized"
+                              ? "text-green-600"
+                              : "text-red-600"
+                          }`}
+                        >
+                          {contract.status === "pending" && "Pendiente de pago"}
+                          {contract.status === "active" && "Activo"}
+                          {contract.status === "finalized" && "Finalizado"}
+                          {contract.status === "cancelled" && "Cancelado"}
+                        </span>
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex-grow">
+                      <p className="mb-1">
+                        <span className="font-medium">Tarifa:</span> ${contract.serviceRate.toFixed(2)} USD
+                      </p>
+                      <p className="mb-1">
+                        <span className="font-medium">Depósito Cliente:</span>{" "}
+                        {contract.clientDeposited ? "Sí" : "No"}
+                      </p>
+                      <p className="mb-1">
+                        <span className="font-medium">Proveedor Finalizó:</span>{" "}
+                        {contract.providerFinalized ? "Sí" : "No"}
+                      </p>
+                      {contract.status === "active" && contract.clientDeposited && contract.providerFinalized && (
+                        <Button className="mt-4 w-full" onClick={() => handleConfirmCompletion(contract.id)}>
+                          Marcar como Conforme y Liberar Fondos
+                        </Button>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           )}
         </div>

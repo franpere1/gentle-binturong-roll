@@ -12,6 +12,7 @@ import ChatWindow from "./ChatWindow";
 import { useAuth } from "@/context/AuthContext";
 import { useContracts } from "@/context/ContractContext";
 import { showError } from "@/utils/toast";
+import PaymentSimulationModal from "./PaymentSimulationModal"; // Importar el nuevo modal de pago
 
 interface ProviderContactModalProps {
   provider: Provider;
@@ -28,6 +29,7 @@ const ProviderContactModal: React.FC<ProviderContactModalProps> = ({
   const { createContract, depositFunds } = useContracts();
   const [contractCreated, setContractCreated] = useState(false);
   const [currentContractId, setCurrentContractId] = useState<string | null>(null);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false); // Nuevo estado para el modal de pago
 
   const handleContractService = () => {
     if (!currentUser) {
@@ -49,85 +51,99 @@ const ProviderContactModal: React.FC<ProviderContactModalProps> = ({
     if (newContract) {
       setCurrentContractId(newContract.id);
       setContractCreated(true);
+      setIsPaymentModalOpen(true); // Abrir el modal de simulación de pago
     }
   };
 
-  const handleSimulatePayment = () => {
+  const handlePaymentConfirmed = () => {
     if (currentContractId) {
       depositFunds(currentContractId);
-      onClose(); // Cerrar el modal después de la simulación de pago
+      onClose(); // Cerrar el modal principal después de la simulación de pago
     }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px] md:max-w-lg lg:max-w-2xl overflow-y-auto max-h-[90vh]">
-        <DialogHeader>
-          <DialogTitle>Contactar a {provider.name}</DialogTitle>
-          <DialogDescription>
-            Aquí puedes ver los detalles del servicio y chatear con el proveedor.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="space-y-2">
-            <h3 className="text-lg font-semibold">Detalles del Proveedor</h3>
-            <p>
-              <span className="font-medium">Nombre:</span> {provider.name}
-            </p>
-            <p>
-              <span className="font-medium">Correo:</span> {provider.email}
-            </p>
-            <p>
-              <span className="font-medium">Estado:</span> {provider.state}
-            </p>
-          </div>
-          <div className="space-y-2">
-            <h3 className="text-lg font-semibold">Detalles del Servicio</h3>
-            <p>
-              <span className="font-medium">Categoría:</span> {provider.category}
-            </p>
-            <p>
-              <span className="font-medium">Título:</span> {provider.serviceTitle}
-            </p>
-            <p>
-              <span className="font-medium">Descripción:</span> {provider.serviceDescription}
-            </p>
-            <p>
-              <span className="font-medium">Tarifa:</span> ${provider.rate.toFixed(2)} USD
-            </p>
-            {provider.serviceImage && (
-              <div className="mt-2">
-                <img
-                  src={provider.serviceImage}
-                  alt={provider.serviceTitle}
-                  className="w-full h-48 object-cover rounded-md shadow-sm"
-                />
-              </div>
-            )}
-          </div>
-          <div className="space-y-2">
-            <h3 className="text-lg font-semibold">Chat con {provider.name}</h3>
-            <ChatWindow otherUser={provider} />
-          </div>
-          <div className="mt-4">
-            {!contractCreated ? (
-              <Button className="w-full" onClick={handleContractService}>
-                Contratar Servicio
-              </Button>
-            ) : (
-              <div className="text-center">
-                <p className="mb-2 text-lg font-semibold text-blue-600 dark:text-blue-400">
-                  Contrato creado. Total a depositar: ${provider.rate.toFixed(2)} USD
-                </p>
-                <Button className="w-full" onClick={handleSimulatePayment}>
-                  Simular Depósito de Fondos
+    <>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="sm:max-w-[425px] md:max-w-lg lg:max-w-2xl overflow-y-auto max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle>Contactar a {provider.name}</DialogTitle>
+            <DialogDescription>
+              Aquí puedes ver los detalles del servicio y chatear con el proveedor.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <h3 className="text-lg font-semibold">Detalles del Proveedor</h3>
+              <p>
+                <span className="font-medium">Nombre:</span> {provider.name}
+              </p>
+              <p>
+                <span className="font-medium">Correo:</span> {provider.email}
+              </p>
+              <p>
+                <span className="font-medium">Estado:</span> {provider.state}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-lg font-semibold">Detalles del Servicio</h3>
+              <p>
+                <span className="font-medium">Categoría:</span> {provider.category}
+              </p>
+              <p>
+                <span className="font-medium">Título:</span> {provider.serviceTitle}
+              </p>
+              <p>
+                <span className="font-medium">Descripción:</span> {provider.serviceDescription}
+              </p>
+              <p>
+                <span className="font-medium">Tarifa:</span> ${provider.rate.toFixed(2)} USD
+              </p>
+              {provider.serviceImage && (
+                <div className="mt-2">
+                  <img
+                    src={provider.serviceImage}
+                    alt={provider.serviceTitle}
+                    className="w-full h-48 object-cover rounded-md shadow-sm"
+                  />
+                </div>
+              )}
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-lg font-semibold">Chat con {provider.name}</h3>
+              <ChatWindow otherUser={provider} />
+            </div>
+            <div className="mt-4">
+              {!contractCreated ? (
+                <Button className="w-full" onClick={handleContractService}>
+                  Contratar Servicio
                 </Button>
-              </div>
-            )}
+              ) : (
+                <div className="text-center">
+                  <p className="mb-2 text-lg font-semibold text-blue-600 dark:text-blue-400">
+                    Contrato creado. Por favor, deposita los fondos.
+                  </p>
+                  <Button className="w-full" onClick={() => setIsPaymentModalOpen(true)}>
+                    Ir a Pasarela de Pago
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de simulación de pago */}
+      {isPaymentModalOpen && (
+        <PaymentSimulationModal
+          isOpen={isPaymentModalOpen}
+          onClose={() => setIsPaymentModalOpen(false)}
+          serviceTitle={provider.serviceTitle}
+          amount={provider.rate}
+          onConfirm={handlePaymentConfirmed}
+        />
+      )}
+    </>
   );
 };
 
