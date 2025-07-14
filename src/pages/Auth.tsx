@@ -180,6 +180,7 @@ const ProviderRegistrationForm: React.FC = () => {
   const [serviceTitle, setServiceTitle] = useState("");
   const [serviceDescription, setServiceDescription] = useState("");
   const [serviceImage, setServiceImage] = useState(""); // For demo, just a URL/text
+  const [password, setPassword] = useState(""); // Added missing password state
   const { registerProvider } = useAuth();
   const navigate = useNavigate();
 
