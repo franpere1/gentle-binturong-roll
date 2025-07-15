@@ -101,7 +101,7 @@ const ProviderDashboard: React.FC = () => {
                     <h4 className="font-semibold mb-2">Comentarios Recientes:</h4>
                     <ScrollArea className="h-40 w-full rounded-md border p-4"> {/* ScrollArea añadida aquí */}
                       <ul className="list-disc list-inside text-sm text-gray-600 dark:text-gray-400">
-                        {(provider.feedback || []).slice(-3).reverse().map((f, index) => ( // Mostrar los 3 últimos comentarios
+                        {(provider.feedback || []).reverse().map((f, index) => ( // Mostrar todos los comentarios
                           <li key={index}>
                             <span className={`font-medium ${
                               f.type === "positive" ? "text-green-600" :
