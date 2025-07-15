@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -7,16 +7,19 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Contract } from "@/types";
+import { Contract, FeedbackType } from "@/types";
 import { useContracts } from "@/context/ContractContext";
-import { useAuth } from "@/context/AuthContext"; // Importar useAuth para obtener el currentUser
+import { useAuth } from "@/context/AuthContext";
+import { showError, showSuccess } from "@/utils/toast";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 interface ContractCompletionModalProps {
   isOpen: boolean;
   onClose: () => void;
   contract: Contract;
   providerName: string;
-  // onFeedbackProvided: (contract: Contract, providerName: string) => void; // Removed
 }
 
 const ContractCompletionModal: React.FC<ContractCompletionModalProps> = ({
@@ -24,19 +27,41 @@ const ContractCompletionModal: React.FC<ContractCompletionModalProps> = ({
   onClose,
   contract,
   providerName,
-  // onFeedbackProvided, // Removed
 }) => {
-  const { currentUser } = useAuth();
+  const { currentUser, addFeedbackToProvider } = useAuth();
   const { handleContractAction } = useContracts();
+  const [selectedRating, setSelectedRating] = useState<FeedbackType | null>(null);
+  const [comment, setComment] = useState("");
 
   const handleConfirmCompletion = () => {
-    console.log("ContractCompletionModal: 'Confirmar y Liberar Fondos' button clicked for contract:", contract.id);
-    if (currentUser) {
-      handleContractAction(contract.id, currentUser.id, 'finalize');
-      // La lógica de feedback se manejará en el dashboard después de que el estado del contrato se actualice a 'finalized'
-      // Por ahora, solo cerramos el modal. El dashboard se encargará de reabrir el modal de feedback si es necesario.
+    if (!selectedRating) {
+      showError("Por favor, selecciona una calificación para el servicio.");
+      return;
     }
-    onClose();
+    if (comment.trim().length > 30) {
+      showError("El comentario no debe exceder los 30 caracteres.");
+      return;
+    }
+    if (comment.trim() === "") {
+      showError("Por favor, escribe un comentario.");
+      return;
+    }
+
+    if (currentUser && currentUser.id === contract.clientId) {
+      // 1. Add feedback
+      addFeedbackToProvider(
+        contract.providerId,
+        selectedRating,
+        comment.trim()
+      );
+      showSuccess("¡Gracias por tu feedback!");
+
+      // 2. Finalize contract and release funds
+      handleContractAction(contract.id, currentUser.id, 'finalize');
+      onClose();
+    } else {
+      showError("Solo el cliente que contrató puede finalizar el contrato y dejar feedback.");
+    }
   };
 
   const amountToProvider = contract.serviceRate * (1 - contract.commissionRate);
@@ -48,7 +73,7 @@ const ContractCompletionModal: React.FC<ContractCompletionModalProps> = ({
         <DialogHeader>
           <DialogTitle>Finalizar Contrato y Liberar Fondos</DialogTitle>
           <DialogDescription>
-            Confirma que el servicio ha sido completado satisfactoriamente.
+            Confirma que el servicio ha sido completado satisfactoriamente y deja tu feedback.
           </DialogDescription>
         </DialogHeader>
         <div className="py-4 space-y-4">
@@ -67,6 +92,42 @@ const ContractCompletionModal: React.FC<ContractCompletionModalProps> = ({
           <p className="text-sm text-gray-500 dark:text-gray-400">
             (Comisión de la plataforma: ${commissionAmount.toFixed(2)} USD)
           </p>
+
+          <div className="border-t pt-4 mt-4">
+            <h3 className="text-lg font-semibold mb-2">Dejar Feedback</h3>
+            <div>
+              <Label className="mb-2 block">Calificación:</Label>
+              <RadioGroup
+                onValueChange={(value: FeedbackType) => setSelectedRating(value)}
+                value={selectedRating || ""}
+                className="flex space-x-4"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value={FeedbackType.Positive} id="rating-positive" />
+                  <Label htmlFor="rating-positive">Positivo</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value={FeedbackType.Neutral} id="rating-neutral" />
+                  <Label htmlFor="rating-neutral">Neutro</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value={FeedbackType.Negative} id="rating-negative" />
+                  <Label htmlFor="rating-negative">Negativo</Label>
+                </div>
+              </RadioGroup>
+            </div>
+            <div className="mt-4">
+              <Label htmlFor="feedback-comment" className="mb-2 block">Comentario (máx. 30 caracteres):</Label>
+              <Textarea
+                id="feedback-comment"
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                maxLength={30}
+                placeholder="Escribe tu comentario aquí (máx. 30 caracteres)..."
+              />
+            </div>
+          </div>
+
           <p className="text-sm text-gray-500 dark:text-gray-400">
             Al confirmar, los fondos serán liberados al proveedor. Esta acción no se puede deshacer.
           </p>
@@ -75,7 +136,7 @@ const ContractCompletionModal: React.FC<ContractCompletionModalProps> = ({
           <Button variant="outline" onClick={onClose}>
             Cancelar
           </Button>
-          <Button onClick={handleConfirmCompletion}>
+          <Button onClick={handleConfirmCompletion} disabled={!selectedRating || comment.trim() === ""}>
             Confirmar y Liberar Fondos
           </Button>
         </div>

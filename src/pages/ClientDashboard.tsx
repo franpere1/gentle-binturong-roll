@@ -24,7 +24,6 @@ import {
 import ClientProfileEditor from "@/components/ClientProfileEditor";
 import ProviderContactModal from "@/components/ProviderContactModal";
 import ContractCompletionModal from "@/components/ContractCompletionModal";
-import FeedbackModal from "@/components/FeedbackModal";
 import PaymentSimulationModal from "@/components/PaymentSimulationModal";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import ChatWindow from "@/components/ChatWindow"; // Import ChatWindow
@@ -41,8 +40,7 @@ const ClientDashboard: React.FC = () => {
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [isCompletionModalOpen, setIsCompletionModal] = useState(false);
   const [contractToFinalize, setContractToFinalize] = useState<Contract | null>(null);
-  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
-  const [feedbackData, setFeedbackData] = useState<{ contract: Contract; providerName: string } | null>(null);
+  // Removed isFeedbackModalOpen and feedbackData states
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [contractToPay, setContractToPay] = useState<Contract | null>(null);
   const [isContractChatModalOpen, setIsContractChatModalOpen] = useState(false); // New state for contract chat modal
@@ -120,26 +118,27 @@ const ClientDashboard: React.FC = () => {
   }, [clientContracts, searchTermContracts, allProviders, contracts]);
 
   // Effect to open feedback modal if a contract just became finalized
-  useEffect(() => {
-    console.log("ClientDashboard: useEffect for feedback modal triggered.");
-    console.log("ClientDashboard: contractToFinalize:", contractToFinalize);
-    console.log("ClientDashboard: isFeedbackModalOpen:", isFeedbackModalOpen);
+  // This useEffect is no longer needed as feedback is integrated into completion modal
+  // useEffect(() => {
+  //   console.log("ClientDashboard: useEffect for feedback modal triggered.");
+  //   console.log("ClientDashboard: contractToFinalize:", contractToFinalize);
+  //   console.log("ClientDashboard: isFeedbackModalOpen:", isFeedbackModalOpen);
 
-    if (contractToFinalize && contractToFinalize.status === "finalized" && !isFeedbackModalOpen) {
-      console.log("ClientDashboard: Condition met to open feedback modal.");
-      const provider = allProviders.find(p => p.id === contractToFinalize.providerId);
-      if (provider) {
-        setFeedbackData({ contract: contractToFinalize, providerName: provider.name });
-        setIsFeedbackModalOpen(true);
-        setContractToFinalize(null); // Clear after opening feedback
-        console.log("ClientDashboard: Feedback modal opened and contractToFinalize cleared.");
-      } else {
-        console.log("ClientDashboard: Provider not found for contractToFinalize.");
-      }
-    } else {
-      console.log("ClientDashboard: Condition not met to open feedback modal.");
-    }
-  }, [contracts, contractToFinalize, isFeedbackModalOpen, allProviders]);
+  //   if (contractToFinalize && contractToFinalize.status === "finalized" && !isFeedbackModalOpen) {
+  //     console.log("ClientDashboard: Condition met to open feedback modal.");
+  //     const provider = allProviders.find(p => p.id === contractToFinalize.providerId);
+  //     if (provider) {
+  //       setFeedbackData({ contract: contractToFinalize, providerName: provider.name });
+  //       setIsFeedbackModalOpen(true);
+  //       setContractToFinalize(null); // Clear after opening feedback
+  //       console.log("ClientDashboard: Feedback modal opened and contractToFinalize cleared.");
+  //     } else {
+  //       console.log("ClientDashboard: Provider not found for contractToFinalize.");
+  //     }
+  //   } else {
+  //     console.log("ClientDashboard: Condition not met to open feedback modal.");
+  //   }
+  // }, [contracts, contractToFinalize, isFeedbackModalOpen, allProviders]);
 
 
   const handleContactProvider = (provider: Provider) => {
@@ -546,19 +545,13 @@ const ClientDashboard: React.FC = () => {
           onClose={() => {
             console.log("ClientDashboard: ContractCompletionModal closed.");
             setIsCompletionModal(false);
+            setContractToFinalize(null); // Clear after closing completion modal
           }}
           contract={contractToFinalize}
           providerName={allProviders.find(p => p.id === contractToFinalize.providerId)?.name || "Desconocido"}
         />
       )}
-      {isFeedbackModalOpen && feedbackData && (
-        <FeedbackModal
-          isOpen={isFeedbackModalOpen}
-          onClose={() => setIsFeedbackModalOpen(false)}
-          contract={feedbackData.contract}
-          providerName={feedbackData.providerName}
-        />
-      )}
+      {/* Removed FeedbackModal */}
       {isPaymentModalOpen && contractToPay && (
         <PaymentSimulationModal
           isOpen={isPaymentModalOpen}
