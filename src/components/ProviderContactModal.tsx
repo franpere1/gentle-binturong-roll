@@ -30,36 +30,12 @@ const ProviderContactModal: React.FC<ProviderContactModalProps> = ({
   const [contractCreated, setContractCreated] = useState(false);
   const [currentContractId, setCurrentContractId] = useState<string | null>(null);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-  const [chatDisabled, setChatDisabled] = useState(false);
-  const [chatDisabledMessage, setChatDisabledMessage] = useState("");
+  // Eliminamos los estados chatDisabled y chatDisabledMessage ya que el chat siempre estará disponible.
 
   const isClient = currentUser && currentUser.type === "client";
   const clientHasExistingContract = isClient && hasActiveOrPendingContract(currentUser.id, provider.id);
 
-  useEffect(() => {
-    if (isClient && currentUser) {
-      const latestContract = getLatestContractBetweenUsers(currentUser.id, provider.id);
-      if (latestContract) {
-        if (latestContract.status === "finalized") {
-          setChatDisabled(true);
-          setChatDisabledMessage("Este chat está cerrado porque el contrato ha sido finalizado.");
-        } else if (latestContract.status === "cancelled") {
-          setChatDisabled(true);
-          setChatDisabledMessage("Este chat está cerrado porque el contrato ha sido cancelado.");
-        } else {
-          setChatDisabled(false);
-          setChatDisabledMessage("");
-        }
-      } else {
-        setChatDisabled(false);
-        setChatDisabledMessage("");
-      }
-    } else {
-      setChatDisabled(false); // Chat is not disabled if not a client or no current user
-      setChatDisabledMessage("");
-    }
-  }, [currentUser, provider.id, isClient, getLatestContractBetweenUsers]);
-
+  // Eliminamos el useEffect que controlaba el estado de chatDisabled.
 
   const handleContractService = () => {
     if (!currentUser) {
@@ -141,13 +117,8 @@ const ProviderContactModal: React.FC<ProviderContactModalProps> = ({
             </div>
             <div className="space-y-2">
               <h3 className="text-lg font-semibold">Chat con {provider.name}</h3>
-              {chatDisabled ? (
-                <div className="text-center text-gray-500 p-4 border rounded-md bg-gray-50 dark:bg-gray-700">
-                  {chatDisabledMessage}
-                </div>
-              ) : (
-                <ChatWindow otherUser={provider} />
-              )}
+              {/* El ChatWindow siempre se renderizará, y su contenido dependerá del historial de mensajes */}
+              <ChatWindow otherUser={provider} />
             </div>
             <div className="mt-4">
               {isClient && clientHasExistingContract ? (
@@ -155,7 +126,7 @@ const ProviderContactModal: React.FC<ProviderContactModalProps> = ({
                   Ya tienes un contrato pendiente o activo con este proveedor.
                 </p>
               ) : !contractCreated ? (
-                <Button className="w-full" onClick={handleContractService} disabled={!isClient || chatDisabled}>
+                <Button className="w-full" onClick={handleContractService} disabled={!isClient}>
                   Contratar Servicio
                 </Button>
               ) : (
@@ -163,7 +134,7 @@ const ProviderContactModal: React.FC<ProviderContactModalProps> = ({
                   <p className="mb-2 text-lg font-semibold text-blue-600 dark:text-blue-400">
                     Contrato creado. Por favor, deposita los fondos.
                   </p>
-                  <Button className="w-full" onClick={() => setIsPaymentModalOpen(true)} disabled={chatDisabled}>
+                  <Button className="w-full" onClick={() => setIsPaymentModalOpen(true)}>
                     Ir a Pasarela de Pago
                   </Button>
                 </div>
