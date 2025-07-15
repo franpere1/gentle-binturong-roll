@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Contract } from "@/types";
 import { useContracts } from "@/context/ContractContext";
+import { useChat } from "@/context/ChatContext"; // Importar useChat
 
 interface ContractCompletionModalProps {
   isOpen: boolean;
@@ -26,9 +27,12 @@ const ContractCompletionModal: React.FC<ContractCompletionModalProps> = ({
   onFeedbackProvided,
 }) => {
   const { releaseFunds } = useContracts();
+  const { clearConversationMessages } = useChat(); // Usar el contexto de chat
 
   const handleConfirmCompletion = () => {
     if (releaseFunds(contract.id)) {
+      // Borrar el historial del chat entre el cliente y el proveedor
+      clearConversationMessages(contract.clientId, contract.providerId);
       onFeedbackProvided(contract, providerName); // Llamar a la nueva prop
     }
     onClose();

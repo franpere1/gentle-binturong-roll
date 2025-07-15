@@ -6,6 +6,7 @@ interface ChatContextType {
   messages: Message[];
   sendMessage: (receiverId: string, text: string) => void;
   getMessagesForConversation: (otherUserId: string) => Message[];
+  clearConversationMessages: (user1Id: string, user2Id: string) => void; // Nueva función
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -55,8 +56,20 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
       .sort((a, b) => a.timestamp - b.timestamp);
   };
 
+  const clearConversationMessages = (user1Id: string, user2Id: string) => {
+    setAllMessages((prevMessages) =>
+      prevMessages.filter(
+        (msg) =>
+          !(
+            (msg.senderId === user1Id && msg.receiverId === user2Id) ||
+            (msg.senderId === user2Id && msg.receiverId === user1Id)
+          )
+      )
+    );
+  };
+
   return (
-    <ChatContext.Provider value={{ messages: allMessages, sendMessage, getMessagesForConversation }}>
+    <ChatContext.Provider value={{ messages: allMessages, sendMessage, getMessagesForConversation, clearConversationMessages }}>
       {children}
     </ChatContext.Provider>
   );
