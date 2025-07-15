@@ -289,15 +289,15 @@ const ClientDashboard: React.FC = () => {
 
                 // Client can dispute if:
                 // Contract is active (funds deposited), and client hasn't taken any action (finalize/cancel/dispute)
-                // AND the provider HAS taken an action (i.e., providerAction is not "none")
+                // AND the provider HAS taken a conflicting action (finalize or cancel)
                 // and the contract is not already finalized, cancelled, or disputed.
                 const canClientDispute = 
                   contract.status === "active" && 
                   contract.clientDeposited && 
-                  contract.clientAction !== "finalize" && // Client has not yet finalized
-                  contract.clientAction !== "cancel" && // Client has not yet cancelled
-                  contract.clientAction !== "dispute" && // Client has not yet disputed
-                  contract.providerAction !== "none" && // Only allow dispute if provider has acted
+                  contract.clientAction !== "finalize" && 
+                  contract.clientAction !== "cancel" && 
+                  contract.clientAction !== "dispute" && 
+                  (contract.providerAction === "finalize" || contract.providerAction === "cancel") && // Only allow dispute if provider has finalized or cancelled
                   contract.status !== "finalized" &&
                   contract.status !== "cancelled" &&
                   contract.status !== "disputed" &&
@@ -317,7 +317,7 @@ const ClientDashboard: React.FC = () => {
                     break;
                   case "active":
                     if (contract.clientDeposited && contract.clientAction === "accept_offer" && contract.providerAction === "none") {
-                      statusText = "Activo (Esperando respuesta del proveedor)"; // Changed text here
+                      statusText = "Activo (Esperando respuesta del proveedor)";
                       statusColorClass = "text-blue-600";
                     } else if (contract.clientAction === "finalize" && contract.providerAction === "none") {
                       statusText = "Activo (Esperando confirmación del proveedor)";
