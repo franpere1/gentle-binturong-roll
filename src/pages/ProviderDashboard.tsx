@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import Header from "@/components/Header";
 import { MadeWithDyad } from "@/components/made-with-dyad";
 import { useAuth } from "@/context/AuthContext";
@@ -20,17 +20,49 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Input } from "@/components/ui/input"; // Import Input for search bar
 import ProviderProfileEditor from "@/components/ProviderProfileEditor";
-import { Star } from "lucide-react"; // Importar el icono de estrella
-import { ScrollArea } from "@/components/ui/scroll-area"; // Importar ScrollArea
+import { Star } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const ProviderDashboard: React.FC = () => {
-  const { currentUser } = useAuth();
+  const { currentUser, findUserByEmail } = useAuth(); // findUserByEmail para obtener el nombre del cliente
   const { getContractsForUser, finalizeContractByProvider } = useContracts();
   const provider = currentUser as Provider;
   const [isEditing, setIsEditing] = useState(false);
+  const [searchTermContracts, setSearchTermContracts] = useState(""); // Nuevo estado para la búsqueda de contratos
 
   const providerContracts = provider ? getContractsForUser(provider.id) : [];
+
+  // Logic for displaying contracts
+  const displayedContracts = useMemo(() => {
+    const lowerCaseSearchTerm = searchTermContracts.toLowerCase();
+    let filteredContracts = providerContracts.filter(contract => {
+      const client = findUserByEmail(contract.clientId); // Asumiendo que el ID del cliente es el email para findUserByEmail
+      const clientName = client ? client.name.toLowerCase() : "";
+      return (
+        contract.serviceTitle.toLowerCase().includes(lowerCaseSearchTerm) ||
+        clientName.includes(lowerCaseSearchTerm)
+      );
+    });
+
+    // Sort: active contracts first, then by creation date (most recent)
+    filteredContracts.sort((a, b) => {
+      // Active contracts (clientDeposited && providerFinalized) come first
+      const aIsActive = a.status === "active" && a.clientDeposited && !a.providerFinalized; // For provider, active means client deposited but provider hasn't finalized
+      const bIsActive = b.status === "active" && b.clientDeposited && !b.providerFinalized;
+
+      if (aIsActive && !bIsActive) return -1;
+      if (!aIsActive && bIsActive) return 1;
+
+      // Then sort by creation date (most recent first)
+      return b.createdAt - a.createdAt;
+    });
+
+    // Take only the last 3
+    return filteredContracts.slice(0, 3);
+  }, [providerContracts, searchTermContracts, findUserByEmail]);
+
 
   // Calculate accumulated earnings
   const accumulatedEarnings = providerContracts.reduce((total, contract) => {
@@ -99,9 +131,9 @@ const ProviderDashboard: React.FC = () => {
                 {(provider.feedback || []).length > 0 && (
                   <div className="mt-4">
                     <h4 className="font-semibold mb-2">Comentarios Recientes:</h4>
-                    <ScrollArea className="h-40 w-full rounded-md border p-4"> {/* ScrollArea añadida aquí */}
+                    <ScrollArea className="h-40 w-full rounded-md border p-4">
                       <ul className="list-disc list-inside text-sm text-gray-600 dark:text-gray-400">
-                        {(provider.feedback || []).reverse().map((f, index) => ( // Mostrar todos los comentarios
+                        {(provider.feedback || []).reverse().map((f, index) => (
                           <li key={index}>
                             <span className={`font-medium ${
                               f.type === "positive" ? "text-green-600" :
@@ -167,56 +199,75 @@ const ProviderDashboard: React.FC = () => {
 
         <div className="w-full max-w-4xl bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md text-gray-800 dark:text-gray-100">
           <h2 className="text-2xl font-bold mb-4 text-center">Mis Contratos</h2>
-          {providerContracts.length === 0 ? (
+          <div className="mb-6">
+            <Input
+              type="text"
+              placeholder="Buscar contratos por título de servicio o nombre del cliente..."
+              value={searchTermContracts}
+              onChange={(e) => setSearchTermContracts(e.target.value)}
+              className="w-full"
+            />
+          </div>
+          {displayedContracts.length === 0 && searchTermContracts !== "" ? (
+            <p className="text-center text-gray-600 dark:text-gray-400">
+              No se encontraron contratos que coincidan con tu búsqueda.
+            </p>
+          ) : displayedContracts.length === 0 && searchTermContracts === "" ? (
             <p className="text-center text-gray-600 dark:text-gray-400">
               No tienes contratos activos.
             </p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {providerContracts.map((contract) => (
-                <Card key={contract.id} className="flex flex-col">
-                  <CardHeader>
-                    <CardTitle>{contract.serviceTitle}</CardTitle>
-                    <CardDescription>
-                      Estado:{" "}
-                      <span
-                        className={`font-semibold ${
-                          contract.status === "pending"
-                            ? "text-yellow-600"
-                            : contract.status === "active"
-                            ? "text-blue-600"
-                            : contract.status === "finalized"
-                            ? "text-green-600"
-                            : "text-red-600"
-                        }`}
-                      >
-                        {contract.status === "pending" && "Pendiente de pago del cliente"}
-                        {contract.status === "active" && "Activo"}
-                        {contract.status === "finalized" && "Finalizado"}
-                        {contract.status === "cancelled" && "Cancelado"}
-                      </span>
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="flex-grow">
-                    <p className="mb-1">
-                      <span className="font-medium">Tarifa:</span> ${contract.serviceRate.toFixed(2)} USD
-                    </p>
-                    <p className="mb-1">
-                      <span className="font-medium">Depósito Cliente:</span>{" "}
-                      {contract.clientDeposited ? "Sí" : "No"}
-                    </p>
-                    <p className="mb-1">
-                      <span className="font-medium">Proveedor Finalizó:</span>{" "}
-                      {contract.providerFinalized ? "Sí" : "No"}
-                    </p>
-                    {contract.status === "active" && contract.clientDeposited && !contract.providerFinalized && (
-                      <Button className="mt-4 w-full" onClick={() => handleFinalizeService(contract.id)}>
-                        Finalizar Contrato
-                      </Button>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
+              {displayedContracts.map((contract) => {
+                const clientUser = findUserByEmail(contract.clientId); // Obtener el cliente por su ID
+                return (
+                  <Card key={contract.id} className="flex flex-col">
+                    <CardHeader>
+                      <CardTitle>{contract.serviceTitle}</CardTitle>
+                      <CardDescription>
+                        <span className="font-medium">Cliente:</span> {clientUser ? clientUser.name : "Desconocido"}
+                      </CardDescription>
+                      <CardDescription>
+                        Estado:{" "}
+                        <span
+                          className={`font-semibold ${
+                            contract.status === "pending"
+                              ? "text-yellow-600"
+                              : contract.status === "active"
+                              ? "text-blue-600"
+                              : contract.status === "finalized"
+                              ? "text-green-600"
+                              : "text-red-600"
+                          }`}
+                        >
+                          {contract.status === "pending" && "Pendiente de pago del cliente"}
+                          {contract.status === "active" && "Activo"}
+                          {contract.status === "finalized" && "Finalizado"}
+                          {contract.status === "cancelled" && "Cancelado"}
+                        </span>
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex-grow">
+                      <p className="mb-1">
+                        <span className="font-medium">Tarifa:</span> ${contract.serviceRate.toFixed(2)} USD
+                      </p>
+                      <p className="mb-1">
+                        <span className="font-medium">Depósito Cliente:</span>{" "}
+                        {contract.clientDeposited ? "Sí" : "No"}
+                      </p>
+                      <p className="mb-1">
+                        <span className="font-medium">Proveedor Finalizó:</span>{" "}
+                        {contract.providerFinalized ? "Sí" : "No"}
+                      </p>
+                      {contract.status === "active" && contract.clientDeposited && !contract.providerFinalized && (
+                        <Button className="mt-4 w-full" onClick={() => handleFinalizeService(contract.id)}>
+                          Finalizar Contrato
+                        </Button>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           )}
         </div>

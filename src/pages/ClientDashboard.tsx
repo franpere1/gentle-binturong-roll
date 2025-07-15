@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Header from "@/components/Header";
 import { MadeWithDyad } from "@/components/made-with-dyad";
 import { useAuth } from "@/context/AuthContext";
@@ -24,36 +24,36 @@ import {
 import ClientProfileEditor from "@/components/ClientProfileEditor";
 import ProviderContactModal from "@/components/ProviderContactModal";
 import ContractCompletionModal from "@/components/ContractCompletionModal";
-import FeedbackModal from "@/components/FeedbackModal"; // Importar el nuevo modal de feedback
+import FeedbackModal from "@/components/FeedbackModal";
 
 const ClientDashboard: React.FC = () => {
   const { currentUser, getAllProviders } = useAuth();
-  const { getContractsForUser, releaseFunds } = useContracts();
+  const { getContractsForUser } = useContracts();
   const client = currentUser as Client;
   const [isEditing, setIsEditing] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [displayedProviders, setDisplayedProviders] = useState<Provider[]>([]); // Cambiado a displayedProviders
+  const [searchTermProviders, setSearchTermProviders] = useState("");
+  const [searchTermContracts, setSearchTermContracts] = useState(""); // Nuevo estado para la búsqueda de contratos
+  const [displayedProviders, setDisplayedProviders] = useState<Provider[]>([]);
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [isCompletionModalOpen, setIsCompletionModalOpen] = useState(false);
   const [contractToFinalize, setContractToFinalize] = useState<Contract | null>(null);
-  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false); // Nuevo estado para el modal de feedback
-  const [feedbackData, setFeedbackData] = useState<{ contract: Contract; providerName: string } | null>(null); // Datos para el modal de feedback
+  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
+  const [feedbackData, setFeedbackData] = useState<{ contract: Contract; providerName: string } | null>(null);
 
   const allProviders = getAllProviders();
   const clientContracts = client ? getContractsForUser(client.id) : [];
 
+  // Logic for displaying providers (existing functionality)
   useEffect(() => {
-    const lowerCaseSearchTerm = searchTerm.toLowerCase();
+    const lowerCaseSearchTerm = searchTermProviders.toLowerCase();
     let results: Provider[] = [];
 
     if (lowerCaseSearchTerm === "") {
-      // Si no hay término de búsqueda, mostrar los 6 más recientes
       results = [...allProviders]
-        .sort((a, b) => b.createdAt - a.createdAt) // Ordenar por fecha de creación descendente
-        .slice(0, 6); // Tomar los 6 primeros
+        .sort((a, b) => b.createdAt - a.createdAt)
+        .slice(0, 6);
     } else {
-      // Si hay término de búsqueda, filtrar por él
       results = allProviders.filter(
         (provider) =>
           provider.name.toLowerCase().includes(lowerCaseSearchTerm) ||
@@ -63,8 +63,38 @@ const ClientDashboard: React.FC = () => {
           provider.state.toLowerCase().includes(lowerCaseSearchTerm)
       );
     }
-    setDisplayedProviders(results); // Actualizar los proveedores a mostrar
-  }, [searchTerm, allProviders]);
+    setDisplayedProviders(results);
+  }, [searchTermProviders, allProviders]);
+
+  // Logic for displaying contracts (new functionality)
+  const displayedContracts = useMemo(() => {
+    const lowerCaseSearchTerm = searchTermContracts.toLowerCase();
+    let filteredContracts = clientContracts.filter(contract => {
+      const provider = allProviders.find(p => p.id === contract.providerId);
+      const providerName = provider ? provider.name.toLowerCase() : "";
+      return (
+        contract.serviceTitle.toLowerCase().includes(lowerCaseSearchTerm) ||
+        providerName.includes(lowerCaseSearchTerm)
+      );
+    });
+
+    // Sort: active contracts first, then by creation date (most recent)
+    filteredContracts.sort((a, b) => {
+      // Active contracts (clientDeposited && providerFinalized) come first
+      const aIsActive = a.status === "active" && a.clientDeposited && a.providerFinalized;
+      const bIsActive = b.status === "active" && b.clientDeposited && b.providerFinalized;
+
+      if (aIsActive && !bIsActive) return -1;
+      if (!aIsActive && bIsActive) return 1;
+
+      // Then sort by creation date (most recent first)
+      return b.createdAt - a.createdAt;
+    });
+
+    // Take only the last 3
+    return filteredContracts.slice(0, 3);
+  }, [clientContracts, searchTermContracts, allProviders]);
+
 
   const handleContactProvider = (provider: Provider) => {
     setSelectedProvider(provider);
@@ -140,13 +170,26 @@ const ClientDashboard: React.FC = () => {
 
         <div className="w-full max-w-4xl bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md text-gray-800 dark:text-gray-100 mb-8">
           <h2 className="text-2xl font-bold mb-4 text-center">Mis Contratos</h2>
-          {clientContracts.length === 0 ? (
+          <div className="mb-6">
+            <Input
+              type="text"
+              placeholder="Buscar contratos por título de servicio o nombre del proveedor..."
+              value={searchTermContracts}
+              onChange={(e) => setSearchTermContracts(e.target.value)}
+              className="w-full"
+            />
+          </div>
+          {displayedContracts.length === 0 && searchTermContracts !== "" ? (
+            <p className="text-center text-gray-600 dark:text-gray-400">
+              No se encontraron contratos que coincidan con tu búsqueda.
+            </p>
+          ) : displayedContracts.length === 0 && searchTermContracts === "" ? (
             <p className="text-center text-gray-600 dark:text-gray-400">
               No tienes contratos activos.
             </p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {clientContracts.map((contract) => {
+              {displayedContracts.map((contract) => {
                 const provider = allProviders.find(p => p.id === contract.providerId);
                 return (
                   <Card key={contract.id} className="flex flex-col">
@@ -206,17 +249,17 @@ const ClientDashboard: React.FC = () => {
             <Input
               type="text"
               placeholder="Buscar proveedores por nombre, categoría, título, descripción o estado..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              value={searchTermProviders}
+              onChange={(e) => setSearchTermProviders(e.target.value)}
               className="w-full"
             />
           </div>
 
-          {displayedProviders.length === 0 && searchTerm !== "" ? (
+          {displayedProviders.length === 0 && searchTermProviders !== "" ? (
             <p className="text-center text-gray-600 dark:text-gray-400">
               No se encontraron servicios que coincidan con tu búsqueda.
             </p>
-          ) : displayedProviders.length === 0 && searchTerm === "" ? (
+          ) : displayedProviders.length === 0 && searchTermProviders === "" ? (
             <p className="text-center text-gray-600 dark:text-gray-400">
               No hay proveedores registrados aún.
             </p>
@@ -271,7 +314,7 @@ const ClientDashboard: React.FC = () => {
           onClose={() => setIsCompletionModalOpen(false)}
           contract={contractToFinalize}
           providerName={allProviders.find(p => p.id === contractToFinalize.providerId)?.name || "Desconocido"}
-          onFeedbackProvided={handleFeedbackProvided} // Pasar la nueva prop
+          onFeedbackProvided={handleFeedbackProvided}
         />
       )}
       {isFeedbackModalOpen && feedbackData && (
