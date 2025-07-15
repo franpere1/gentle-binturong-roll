@@ -23,7 +23,8 @@ import {
 } from "@/components/ui/card";
 import ClientProfileEditor from "@/components/ClientProfileEditor";
 import ProviderContactModal from "@/components/ProviderContactModal";
-import ContractCompletionModal from "@/components/ContractCompletionModal"; // Importar el nuevo modal
+import ContractCompletionModal from "@/components/ContractCompletionModal";
+import FeedbackModal from "@/components/FeedbackModal"; // Importar el nuevo modal de feedback
 
 const ClientDashboard: React.FC = () => {
   const { currentUser, getAllProviders } = useAuth();
@@ -34,8 +35,10 @@ const ClientDashboard: React.FC = () => {
   const [filteredProviders, setFilteredProviders] = useState<Provider[]>([]);
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
-  const [isCompletionModalOpen, setIsCompletionModalOpen] = useState(false); // Nuevo estado para el modal de finalización
-  const [contractToFinalize, setContractToFinalize] = useState<Contract | null>(null); // Estado para el contrato a finalizar
+  const [isCompletionModalOpen, setIsCompletionModalOpen] = useState(false);
+  const [contractToFinalize, setContractToFinalize] = useState<Contract | null>(null);
+  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false); // Nuevo estado para el modal de feedback
+  const [feedbackData, setFeedbackData] = useState<{ contract: Contract; providerName: string } | null>(null); // Datos para el modal de feedback
 
   const allProviders = getAllProviders();
   const clientContracts = client ? getContractsForUser(client.id) : [];
@@ -61,6 +64,11 @@ const ClientDashboard: React.FC = () => {
   const handleCloseContract = (contract: Contract) => {
     setContractToFinalize(contract);
     setIsCompletionModalOpen(true);
+  };
+
+  const handleFeedbackProvided = (contract: Contract, providerName: string) => {
+    setFeedbackData({ contract, providerName });
+    setIsFeedbackModalOpen(true);
   };
 
   if (!client) {
@@ -253,6 +261,15 @@ const ClientDashboard: React.FC = () => {
           onClose={() => setIsCompletionModalOpen(false)}
           contract={contractToFinalize}
           providerName={allProviders.find(p => p.id === contractToFinalize.providerId)?.name || "Desconocido"}
+          onFeedbackProvided={handleFeedbackProvided} // Pasar la nueva prop
+        />
+      )}
+      {isFeedbackModalOpen && feedbackData && (
+        <FeedbackModal
+          isOpen={isFeedbackModalOpen}
+          onClose={() => setIsFeedbackModalOpen(false)}
+          contract={feedbackData.contract}
+          providerName={feedbackData.providerName}
         />
       )}
       <MadeWithDyad />

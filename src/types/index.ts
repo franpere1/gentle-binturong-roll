@@ -19,6 +19,21 @@ export interface Client extends User {
   type: "client";
 }
 
+export enum FeedbackType {
+  Positive = "positive",
+  Negative = "negative",
+  Neutral = "neutral",
+}
+
+export interface Feedback {
+  id: string;
+  clientId: string;
+  providerId: string;
+  type: FeedbackType;
+  comment: string;
+  timestamp: number;
+}
+
 export interface Provider extends User {
   type: "provider";
   category: ServiceCategory;
@@ -26,6 +41,8 @@ export interface Provider extends User {
   serviceDescription: string;
   serviceImage?: string; // Base64 string or URL for demo
   rate: number; // Nuevo campo para la tarifa del servicio
+  feedback: Feedback[]; // Array para almacenar el feedback
+  starRating: number; // Calificación por estrellas calculada
 }
 
 export interface Message {

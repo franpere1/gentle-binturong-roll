@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import Header from "@/components/Header";
 import { MadeWithDyad } from "@/components/made-with-dyad";
 import { useAuth } from "@/context/AuthContext";
-import { useContracts } from "@/context/ContractContext"; // Usar useContracts
+import { useContracts } from "@/context/ContractContext";
 import { Provider, Contract } from "@/types";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,10 +21,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import ProviderProfileEditor from "@/components/ProviderProfileEditor";
+import { Star } from "lucide-react"; // Importar el icono de estrella
 
 const ProviderDashboard: React.FC = () => {
   const { currentUser } = useAuth();
-  const { getContractsForUser, finalizeContractByProvider } = useContracts(); // Usar useContracts
+  const { getContractsForUser, finalizeContractByProvider } = useContracts();
   const provider = currentUser as Provider;
   const [isEditing, setIsEditing] = useState(false);
 
@@ -68,6 +69,39 @@ const ProviderDashboard: React.FC = () => {
               <p className="mb-2">
                 <span className="font-medium">Estado:</span> {provider.state}
               </p>
+              <div className="mt-4">
+                <h3 className="text-xl font-semibold mb-2">Calificación:</h3>
+                <div className="flex items-center">
+                  {[...Array(5)].map((_, i) => (
+                    <Star
+                      key={i}
+                      className={`h-6 w-6 ${
+                        i < provider.starRating ? "text-yellow-500 fill-yellow-500" : "text-gray-300 dark:text-gray-600"
+                      }`}
+                    />
+                  ))}
+                  <span className="ml-2 text-lg font-medium">
+                    ({provider.starRating} / 5 estrellas)
+                  </span>
+                </div>
+                {provider.feedback.length > 0 && (
+                  <div className="mt-4">
+                    <h4 className="font-semibold mb-2">Comentarios Recientes:</h4>
+                    <ul className="list-disc list-inside text-sm text-gray-600 dark:text-gray-400">
+                      {provider.feedback.slice(-3).reverse().map((f, index) => ( // Mostrar los 3 últimos comentarios
+                        <li key={index}>
+                          <span className={`font-medium ${
+                            f.type === "positive" ? "text-green-600" :
+                            f.type === "negative" ? "text-red-600" : "text-gray-500"
+                          }`}>
+                            {f.type === "positive" ? "Positivo" : f.type === "negative" ? "Negativo" : "Neutro"}
+                          </span>: "{f.comment}"
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
             </div>
             <div>
               <h2 className="text-2xl font-semibold mb-4">Tu Servicio</h2>

@@ -15,6 +15,7 @@ interface ContractCompletionModalProps {
   onClose: () => void;
   contract: Contract;
   providerName: string;
+  onFeedbackProvided: (contract: Contract, providerName: string) => void; // Nueva prop
 }
 
 const ContractCompletionModal: React.FC<ContractCompletionModalProps> = ({
@@ -22,11 +23,14 @@ const ContractCompletionModal: React.FC<ContractCompletionModalProps> = ({
   onClose,
   contract,
   providerName,
+  onFeedbackProvided,
 }) => {
   const { releaseFunds } = useContracts();
 
   const handleConfirmCompletion = () => {
-    releaseFunds(contract.id);
+    if (releaseFunds(contract.id)) {
+      onFeedbackProvided(contract, providerName); // Llamar a la nueva prop
+    }
     onClose();
   };
 

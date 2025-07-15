@@ -5,7 +5,7 @@ import React, {
   ReactNode,
   useEffect,
 } from "react";
-import { Client, Provider, User } from "@/types";
+import { Client, Provider, User, Feedback, FeedbackType } from "@/types";
 import { showSuccess, showError } from "@/utils/toast";
 
 interface AuthContextType {
@@ -16,7 +16,12 @@ interface AuthContextType {
   registerProvider: (provider: Provider) => boolean;
   findUserByEmail: (email: string) => User | undefined;
   updateUser: (user: User) => void;
-  getAllProviders: () => Provider[]; // Nueva función para obtener todos los proveedores
+  getAllProviders: () => Provider[];
+  addFeedbackToProvider: (
+    providerId: string,
+    type: FeedbackType,
+    comment: string
+  ) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -27,24 +32,20 @@ interface AuthProviderProps {
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [users, setUsers] = useState<User[]>(() => {
-    // Load users from local storage on initial load
     const storedUsers = localStorage.getItem("appUsers");
     return storedUsers ? JSON.parse(storedUsers) : [];
   });
 
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
-    // Load current user from local storage on initial load
     const storedCurrentUser = localStorage.getItem("currentUser");
     return storedCurrentUser ? JSON.parse(storedCurrentUser) : null;
   });
 
   useEffect(() => {
-    // Save users to local storage whenever the users state changes
     localStorage.setItem("appUsers", JSON.stringify(users));
   }, [users]);
 
   useEffect(() => {
-    // Save current user to local storage whenever currentUser state changes
     if (currentUser) {
       localStorage.setItem("currentUser", JSON.stringify(currentUser));
     } else {
@@ -82,7 +83,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       showError("Este correo electrónico ya está registrado.");
       return false;
     }
-    const newUser = { ...provider, id: `user-${users.length + 1}` };
+    const newUser = { ...provider, id: `user-${users.length + 1}`, feedback: [], starRating: 0 };
     setUsers((prevUsers) => [...prevUsers, newUser]);
     showSuccess("Registro de proveedor exitoso. ¡Ahora puedes iniciar sesión!");
     return true;
@@ -94,7 +95,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         user.id === updatedUser.id ? updatedUser : user
       )
     );
-    // If the updated user is the current logged-in user, update currentUser state
     if (currentUser && currentUser.id === updatedUser.id) {
       setCurrentUser(updatedUser);
     }
@@ -103,6 +103,41 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const getAllProviders = (): Provider[] => {
     return users.filter((user) => user.type === "provider") as Provider[];
+  };
+
+  const addFeedbackToProvider = (
+    providerId: string,
+    type: FeedbackType,
+    comment: string
+  ) => {
+    setUsers((prevUsers) =>
+      prevUsers.map((user) => {
+        if (user.id === providerId && user.type === "provider") {
+          const provider = user as Provider;
+          const newFeedback: Feedback = {
+            id: `feedback-${provider.feedback.length + 1}-${Date.now()}`,
+            clientId: currentUser!.id, // Asumimos que currentUser existe y es el cliente
+            providerId: provider.id,
+            type,
+            comment,
+            timestamp: Date.now(),
+          };
+
+          const updatedFeedback = [...provider.feedback, newFeedback];
+          const positiveCount = updatedFeedback.filter(
+            (f) => f.type === FeedbackType.Positive
+          ).length;
+          const newStarRating = Math.min(5, Math.floor(positiveCount / 5));
+
+          return {
+            ...provider,
+            feedback: updatedFeedback,
+            starRating: newStarRating,
+          };
+        }
+        return user;
+      })
+    );
   };
 
   return (
@@ -115,7 +150,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         registerProvider,
         findUserByEmail,
         updateUser,
-        getAllProviders, // Añadir getAllProviders al contexto
+        getAllProviders,
+        addFeedbackToProvider,
       }}
     >
       {children}
