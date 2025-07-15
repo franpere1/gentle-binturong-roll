@@ -108,4 +108,5 @@ export interface Contract {
   commissionRate: number; // e.g., 0.10 for 10%
   createdAt: number;
   updatedAt: number;
+  disputeResolution?: 'toClient' | 'toProvider'; // Nuevo: Almacena cómo se resolvió la disputa
 }

@@ -99,6 +99,7 @@ export const ContractProvider: React.FC<ContractProviderProps> = ({ children }) 
       commissionRate: 0.10, // 10% de comisión
       createdAt: Date.now(),
       updatedAt: Date.now(),
+      disputeResolution: undefined, // Inicializar como undefined
     };
 
     setContracts((prev) => [...prev, newContract]);
@@ -245,7 +246,7 @@ export const ContractProvider: React.FC<ContractProviderProps> = ({ children }) 
           showSuccess(message);
           clearConversationMessages(contract.clientId, contract.providerId); // Clear chat on dispute resolution
           console.log("ContractContext: Dispute resolved.");
-          return { ...contract, status: "finalized_by_dispute", updatedAt: Date.now() };
+          return { ...contract, status: "finalized_by_dispute", disputeResolution: resolutionType, updatedAt: Date.now() };
         }
         return contract;
       });

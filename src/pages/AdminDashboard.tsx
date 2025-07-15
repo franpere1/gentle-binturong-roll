@@ -23,6 +23,12 @@ const AdminDashboard: React.FC = () => {
     return contracts.filter(contract => contract.status === "disputed");
   }, [contracts]);
 
+  // Filter for resolved disputes
+  const resolvedDisputes = useMemo(() => {
+    return contracts.filter(contract => contract.status === "finalized_by_dispute")
+      .sort((a, b) => b.updatedAt - a.updatedAt); // Sort by most recently updated
+  }, [contracts]);
+
   const handleResolveToProvider = (contract: Contract) => {
     if (currentUser?.type === "admin") {
       resolveDispute(contract.id, "toProvider");
@@ -67,7 +73,7 @@ const AdminDashboard: React.FC = () => {
             Panel de Administración
           </h1>
           <p className="text-xl text-gray-600 dark:text-gray-300 text-center mb-8">
-            Gestiona los contratos en disputa.
+            Gestiona los contratos en disputa y revisa las resoluciones.
           </p>
 
           <h2 className="text-2xl font-bold mb-4 text-center">Contratos en Disputa</h2>
@@ -121,6 +127,53 @@ const AdminDashboard: React.FC = () => {
                           Liberar Fondos al Cliente (${contract.serviceRate.toFixed(2)} USD)
                         </Button>
                       </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+
+          <h2 className="text-2xl font-bold mt-8 mb-4 text-center">Historial de Disputas Resueltas</h2>
+          {resolvedDisputes.length === 0 ? (
+            <p className="text-center text-gray-600 dark:text-gray-400">
+              No hay disputas resueltas aún.
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {resolvedDisputes.map((contract) => {
+                const client = findUserById(contract.clientId) as Client | undefined;
+                const provider = findUserById(contract.providerId) as Provider | undefined;
+
+                const resolutionText = contract.disputeResolution === 'toClient'
+                  ? `Fondos liberados al Cliente ($${contract.serviceRate.toFixed(2)} USD)`
+                  : `Fondos liberados al Proveedor ($${(contract.serviceRate * (1 - contract.commissionRate)).toFixed(2)} USD)`;
+                const resolutionColor = contract.disputeResolution === 'toClient' ? 'text-red-600' : 'text-green-600';
+
+                return (
+                  <Card key={contract.id} className="flex flex-col opacity-80">
+                    <CardHeader>
+                      <CardTitle>{contract.serviceTitle}</CardTitle>
+                      <CardDescription>
+                        <span className="font-medium">ID Contrato:</span> {contract.id}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex-grow space-y-2">
+                      <p>
+                        <span className="font-medium">Monto Original:</span> ${contract.serviceRate.toFixed(2)} USD
+                      </p>
+                      <p>
+                        <span className="font-medium">Cliente:</span> {client?.name || "Desconocido"}
+                      </p>
+                      <p>
+                        <span className="font-medium">Proveedor:</span> {provider?.name || "Desconocido"}
+                      </p>
+                      <p className="font-medium">
+                        Fecha de Resolución: {new Date(contract.updatedAt).toLocaleDateString()}
+                      </p>
+                      <p className={`font-semibold ${resolutionColor}`}>
+                        Resolución: {resolutionText}
+                      </p>
                     </CardContent>
                   </Card>
                 );
