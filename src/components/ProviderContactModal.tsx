@@ -13,6 +13,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useContracts } from "@/context/ContractContext";
 import { showError, showSuccess } from "@/utils/toast";
 import PaymentSimulationModal from "./PaymentSimulationModal";
+import { useNavigate } from "react-router-dom"; // Importar useNavigate
 
 interface ProviderContactModalProps {
   provider: Provider;
@@ -28,6 +29,7 @@ const ProviderContactModal: React.FC<ProviderContactModalProps> = ({
   const { currentUser } = useAuth();
   const { createContract, depositFunds, hasActiveOrPendingContract } = useContracts();
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const navigate = useNavigate(); // Inicializar useNavigate
 
   const isClient = currentUser && currentUser.type === "client";
   const clientHasExistingContract = isClient && hasActiveOrPendingContract(currentUser.id, provider.id);
@@ -66,6 +68,8 @@ const ProviderContactModal: React.FC<ProviderContactModalProps> = ({
       const depositSuccess = depositFunds(newContract.id);
       if (depositSuccess) {
         // El toast de éxito ya se muestra dentro de depositFunds
+        onClose(); // Cerrar el modal de contacto del proveedor
+        navigate("/client-dashboard"); // Redirigir al dashboard del cliente
       } else {
         showError("Error al depositar fondos. Inténtalo de nuevo.");
       }
