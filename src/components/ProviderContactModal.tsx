@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Provider } from "@/types";
 import {
   Dialog,
@@ -26,13 +26,40 @@ const ProviderContactModal: React.FC<ProviderContactModalProps> = ({
   onClose,
 }) => {
   const { currentUser } = useAuth();
-  const { createContract, depositFunds, hasActiveOrPendingContract } = useContracts();
+  const { createContract, depositFunds, hasActiveOrPendingContract, getLatestContractBetweenUsers } = useContracts();
   const [contractCreated, setContractCreated] = useState(false);
   const [currentContractId, setCurrentContractId] = useState<string | null>(null);
-  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false); // Nuevo estado para el modal de pago
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [chatDisabled, setChatDisabled] = useState(false);
+  const [chatDisabledMessage, setChatDisabledMessage] = useState("");
 
   const isClient = currentUser && currentUser.type === "client";
   const clientHasExistingContract = isClient && hasActiveOrPendingContract(currentUser.id, provider.id);
+
+  useEffect(() => {
+    if (isClient && currentUser) {
+      const latestContract = getLatestContractBetweenUsers(currentUser.id, provider.id);
+      if (latestContract) {
+        if (latestContract.status === "finalized") {
+          setChatDisabled(true);
+          setChatDisabledMessage("Este chat está cerrado porque el contrato ha sido finalizado.");
+        } else if (latestContract.status === "cancelled") {
+          setChatDisabled(true);
+          setChatDisabledMessage("Este chat está cerrado porque el contrato ha sido cancelado.");
+        } else {
+          setChatDisabled(false);
+          setChatDisabledMessage("");
+        }
+      } else {
+        setChatDisabled(false);
+        setChatDisabledMessage("");
+      }
+    } else {
+      setChatDisabled(false); // Chat is not disabled if not a client or no current user
+      setChatDisabledMessage("");
+    }
+  }, [currentUser, provider.id, isClient, getLatestContractBetweenUsers]);
+
 
   const handleContractService = () => {
     if (!currentUser) {
@@ -54,14 +81,14 @@ const ProviderContactModal: React.FC<ProviderContactModalProps> = ({
     if (newContract) {
       setCurrentContractId(newContract.id);
       setContractCreated(true);
-      setIsPaymentModalOpen(true); // Abrir el modal de simulación de pago
+      setIsPaymentModalOpen(true);
     }
   };
 
   const handlePaymentConfirmed = () => {
     if (currentContractId) {
       depositFunds(currentContractId);
-      onClose(); // Cerrar el modal principal después de la simulación de pago
+      onClose();
     }
   };
 
@@ -114,7 +141,13 @@ const ProviderContactModal: React.FC<ProviderContactModalProps> = ({
             </div>
             <div className="space-y-2">
               <h3 className="text-lg font-semibold">Chat con {provider.name}</h3>
-              <ChatWindow otherUser={provider} />
+              {chatDisabled ? (
+                <div className="text-center text-gray-500 p-4 border rounded-md bg-gray-50 dark:bg-gray-700">
+                  {chatDisabledMessage}
+                </div>
+              ) : (
+                <ChatWindow otherUser={provider} />
+              )}
             </div>
             <div className="mt-4">
               {isClient && clientHasExistingContract ? (
@@ -122,7 +155,7 @@ const ProviderContactModal: React.FC<ProviderContactModalProps> = ({
                   Ya tienes un contrato pendiente o activo con este proveedor.
                 </p>
               ) : !contractCreated ? (
-                <Button className="w-full" onClick={handleContractService} disabled={!isClient}>
+                <Button className="w-full" onClick={handleContractService} disabled={!isClient || chatDisabled}>
                   Contratar Servicio
                 </Button>
               ) : (
@@ -130,7 +163,7 @@ const ProviderContactModal: React.FC<ProviderContactModalProps> = ({
                   <p className="mb-2 text-lg font-semibold text-blue-600 dark:text-blue-400">
                     Contrato creado. Por favor, deposita los fondos.
                   </p>
-                  <Button className="w-full" onClick={() => setIsPaymentModalOpen(true)}>
+                  <Button className="w-full" onClick={() => setIsPaymentModalOpen(true)} disabled={chatDisabled}>
                     Ir a Pasarela de Pago
                   </Button>
                 </div>
@@ -140,7 +173,6 @@ const ProviderContactModal: React.FC<ProviderContactModalProps> = ({
         </DialogContent>
       </Dialog>
 
-      {/* Modal de simulación de pago */}
       {isPaymentModalOpen && (
         <PaymentSimulationModal
           isOpen={isPaymentModalOpen}

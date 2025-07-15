@@ -15,7 +15,8 @@ interface ContractContextType {
   finalizeContractByProvider: (contractId: string) => boolean;
   releaseFunds: (contractId: string) => boolean;
   getContractsForUser: (userId: string) => Contract[];
-  hasActiveOrPendingContract: (clientId: string, providerId: string) => boolean; // Nueva función
+  hasActiveOrPendingContract: (clientId: string, providerId: string) => boolean;
+  getLatestContractBetweenUsers: (user1Id: string, user2Id: string) => Contract | null; // Nueva función
 }
 
 const ContractContext = createContext<ContractContextType | undefined>(undefined);
@@ -42,6 +43,19 @@ export const ContractProvider: React.FC<ContractProviderProps> = ({ children }) 
         contract.providerId === providerId &&
         (contract.status === "pending" || contract.status === "active")
     );
+  };
+
+  const getLatestContractBetweenUsers = (user1Id: string, user2Id: string): Contract | null => {
+    const relevantContracts = contracts.filter(
+      (c) =>
+        (c.clientId === user1Id && c.providerId === user2Id) ||
+        (c.clientId === user2Id && c.providerId === user1Id)
+    );
+    if (relevantContracts.length === 0) return null;
+
+    // Sort by creation date to get the latest
+    relevantContracts.sort((a, b) => b.createdAt - a.createdAt);
+    return relevantContracts[0];
   };
 
   const createContract = (
@@ -145,6 +159,7 @@ export const ContractProvider: React.FC<ContractProviderProps> = ({ children }) 
         releaseFunds,
         getContractsForUser,
         hasActiveOrPendingContract,
+        getLatestContractBetweenUsers, // Añadir al contexto
       }}
     >
       {children}
