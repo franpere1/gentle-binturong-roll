@@ -69,8 +69,8 @@ const ProviderDashboard: React.FC = () => {
       if (!aIsReadyForProviderFinalize && bIsReadyForProviderFinalize) return 1;
 
       // 4. Then prioritize 'active' contracts where provider has finalized and waiting for client
-      const aIsProviderFinalizedWaitingClient = a.status === "active" && a.clientDeposited && a.providerAction === "finalize" && a.clientAction === "none";
-      const bIsProviderFinalizedWaitingClient = b.status === "active" && b.clientDeposited && b.providerAction === "finalize" && b.clientAction === "none";
+      const aIsProviderFinalizedWaitingClient = a.status === "active" && a.clientDeposited && a.providerAction === "finalize" && a.clientAction !== "finalize" && a.clientAction !== "cancel" && a.clientAction !== "dispute";
+      const bIsProviderFinalizedWaitingClient = b.status === "active" && b.clientDeposited && b.providerAction === "finalize" && b.clientAction !== "finalize" && b.clientAction !== "cancel" && b.clientAction !== "dispute";
 
       if (aIsProviderFinalizedWaitingClient && !bIsProviderFinalizedWaitingClient) return -1;
       if (!aIsProviderFinalizedWaitingClient && bIsProviderFinalizedWaitingClient) return 1;
@@ -287,16 +287,13 @@ const ProviderDashboard: React.FC = () => {
                   contract.clientAction !== "cancel" && // Client has not cancelled
                   contract.clientAction !== "dispute"; // Client has not disputed
                 
-                // Provider can cancel if contract is not in a final state, and provider hasn't finalized/cancelled their side, and client hasn't finalized/disputed
+                // Provider can cancel if:
+                // 1. Contract is pending (before offer) and provider hasn't acted
+                // 2. Contract is active AND client has initiated cancellation AND provider hasn't acted
                 const canProviderCancel = 
-                  contract.status !== "finalized" && 
-                  contract.status !== "cancelled" && 
-                  contract.status !== "disputed" && 
-                  contract.status !== "finalized_by_dispute" &&
-                  contract.providerAction !== "finalize" && 
-                  contract.providerAction !== "cancel" &&
-                  contract.clientAction !== "finalize" && 
-                  contract.clientAction !== "dispute";
+                  (contract.status === "pending" && contract.providerAction === "none") ||
+                  (contract.status === "active" && contract.clientDeposited && contract.clientAction === "cancel" && contract.providerAction === "none");
+
 
                 let statusText = "";
                 let statusColorClass = "";
