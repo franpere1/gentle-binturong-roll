@@ -84,6 +84,7 @@ export interface Provider extends User {
   rate: number; // Nuevo campo para la tarifa del servicio
   feedback: Feedback[]; // Array para almacenar el feedback
   starRating: number; // Calificación por estrellas calculada
+  phone?: string; // Nuevo campo para el número de teléfono del proveedor
 }
 
 export interface Message {

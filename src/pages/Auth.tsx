@@ -244,6 +244,7 @@ const ProviderRegistrationForm: React.FC = () => {
   const [password, setPassword] = useState("");
   const [rate, setRate] = useState<number | ''>('');
   const [profileImage, setProfileImage] = useState("");
+  const [phone, setPhone] = useState(""); // Nuevo estado para el teléfono del proveedor
   const [openCategoryCombobox, setOpenCategoryCombobox] = useState(false); // State for combobox open/close
 
   const { registerProvider } = useAuth();
@@ -367,6 +368,7 @@ const ProviderRegistrationForm: React.FC = () => {
       serviceImage,
       rate: Number(rate),
       profileImage,
+      phone, // Incluir el teléfono del proveedor
     });
     if (success) {
       navigate("/provider-dashboard");
@@ -409,6 +411,17 @@ const ProviderRegistrationForm: React.FC = () => {
             ))}
           </SelectContent>
         </Select>
+      </div>
+      <div>
+        <Label htmlFor="provider-phone">Número de Teléfono</Label>
+        <Input
+          id="provider-phone"
+          type="tel"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          placeholder="Ej: 0412-1234567"
+          required
+        />
       </div>
       <div>
         <Label htmlFor="provider-category">Categoría del Servicio</Label>

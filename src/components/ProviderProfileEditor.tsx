@@ -53,6 +53,7 @@ const ProviderProfileEditor: React.FC<ProviderProfileEditorProps> = ({
   const [name, setName] = useState(provider.name);
   const [email, setEmail] = useState(provider.email);
   const [state, setState] = useState(provider.state);
+  const [phone, setPhone] = useState(provider.phone || ""); // Nuevo estado para el teléfono
   const [category, setCategory] = useState<ServiceCategory | "">(provider.category);
   const [serviceTitle, setServiceTitle] = useState(provider.serviceTitle);
   const [serviceDescription, setServiceDescription] = useState(provider.serviceDescription);
@@ -186,6 +187,7 @@ const ProviderProfileEditor: React.FC<ProviderProfileEditorProps> = ({
       name,
       email,
       state,
+      phone, // Incluir el teléfono en la actualización
       category: category as ServiceCategory,
       serviceTitle,
       serviceDescription,
@@ -235,6 +237,17 @@ const ProviderProfileEditor: React.FC<ProviderProfileEditorProps> = ({
             ))}
           </SelectContent>
         </Select>
+      </div>
+      <div>
+        <Label htmlFor="edit-phone">Número de Teléfono</Label>
+        <Input
+          id="edit-phone"
+          type="tel"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          placeholder="Ej: 0412-1234567"
+          required
+        />
       </div>
       <div>
         <Label htmlFor="edit-category">Categoría del Servicio</Label>
