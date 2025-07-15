@@ -5,7 +5,7 @@ import React, {
   ReactNode,
   useEffect,
 } from "react";
-import { Client, Provider, User, Feedback, FeedbackType } from "@/types";
+import { Client, Provider, User, Feedback, FeedbackType, Admin } from "@/types";
 import { showSuccess, showError } from "@/utils/toast";
 
 interface AuthContextType {
@@ -35,7 +35,23 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [users, setUsers] = useState<User[]>(() => {
     const storedUsers = localStorage.getItem("appUsers");
-    return storedUsers ? JSON.parse(storedUsers) : [];
+    const initialUsers = storedUsers ? JSON.parse(storedUsers) : [];
+
+    // Add default admin user if not already present
+    const adminExists = initialUsers.some((user: User) => user.email === "admin@admin.com");
+    if (!adminExists) {
+      const adminUser: Admin = {
+        id: "user-admin-1",
+        name: "Admin",
+        email: "admin@admin.com",
+        password: "kilmanjaro",
+        state: "Distrito Capital", // Default state for admin
+        type: "admin",
+        createdAt: Date.now(),
+      };
+      initialUsers.push(adminUser);
+    }
+    return initialUsers;
   });
 
   const [currentUser, setCurrentUser] = useState<User | null>(null);

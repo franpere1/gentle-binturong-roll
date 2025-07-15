@@ -56,6 +56,10 @@ export interface Client extends User {
   phone: string; // Nuevo campo para el número de teléfono
 }
 
+export interface Admin extends User {
+  type: "admin";
+}
+
 export enum FeedbackType {
   Positive = "positive",
   Negative = "negative",
@@ -96,7 +100,7 @@ export interface Contract {
   providerId: string;
   serviceTitle: string; // Título del servicio contratado
   serviceRate: number;  // Tarifa del servicio contratado
-  status: "pending" | "active" | "finalized" | "cancelled" | "disputed"; // Añadido 'disputed'
+  status: "pending" | "active" | "finalized" | "cancelled" | "disputed" | "finalized_by_dispute"; // Añadido 'disputed' y 'finalized_by_dispute'
   clientDeposited: boolean;
   clientAction: "none" | "cancel" | "finalize" | "dispute"; // Nuevo: Acción tomada por el cliente
   providerAction: "none" | "cancel" | "finalize"; // Nuevo: Acción tomada por el proveedor
