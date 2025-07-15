@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import Header from "@/components/Header";
 import { MadeWithDyad } from "@/components/made-with-dyad";
 import { useAuth } from "@/context/AuthContext";
@@ -12,16 +12,40 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Input } from "@/components/ui/input"; // Import Input
 import { showError, showSuccess } from "@/utils/toast";
 
 const AdminDashboard: React.FC = () => {
   const { currentUser, findUserById } = useAuth();
   const { contracts, resolveDispute } = useContracts();
+  const [searchTermDisputes, setSearchTermDisputes] = useState(""); // New state for search term
 
   // Filter for disputed contracts
   const disputedContracts = useMemo(() => {
-    return contracts.filter(contract => contract.status === "disputed");
-  }, [contracts]);
+    const lowerCaseSearchTerm = searchTermDisputes.toLowerCase();
+    let filtered = contracts.filter(contract => contract.status === "disputed");
+
+    if (lowerCaseSearchTerm) {
+      filtered = filtered.filter(contract => {
+        const client = findUserById(contract.clientId);
+        const provider = findUserById(contract.providerId);
+        const clientName = client ? client.name.toLowerCase() : "";
+        const providerName = provider ? provider.name.toLowerCase() : "";
+
+        return (
+          contract.serviceTitle.toLowerCase().includes(lowerCaseSearchTerm) ||
+          clientName.includes(lowerCaseSearchTerm) ||
+          providerName.includes(lowerCaseSearchTerm)
+        );
+      });
+    }
+
+    // Sort by creation date (most recent first)
+    filtered.sort((a, b) => b.createdAt - a.createdAt);
+
+    // Take only the last 3
+    return filtered.slice(0, 3);
+  }, [contracts, searchTermDisputes, findUserById]); // Add searchTermDisputes to dependencies
 
   // Filter for resolved disputes
   const resolvedDisputes = useMemo(() => {
@@ -76,8 +100,21 @@ const AdminDashboard: React.FC = () => {
             Gestiona los contratos en disputa y revisa las resoluciones.
           </p>
 
-          <h2 className="text-2xl font-bold mb-4 text-center">Contratos en Disputa</h2>
-          {disputedContracts.length === 0 ? (
+          <h2 className="text-2xl font-bold mb-4 text-center">Últimas Disputas Activas</h2>
+          <div className="mb-6">
+            <Input
+              type="text"
+              placeholder="Buscar disputas por título de servicio, cliente o proveedor..."
+              value={searchTermDisputes}
+              onChange={(e) => setSearchTermDisputes(e.target.value)}
+              className="w-full"
+            />
+          </div>
+          {disputedContracts.length === 0 && searchTermDisputes !== "" ? (
+            <p className="text-center text-gray-600 dark:text-gray-400">
+              No se encontraron disputas que coincidan con tu búsqueda.
+            </p>
+          ) : disputedContracts.length === 0 && searchTermDisputes === "" ? (
             <p className="text-center text-gray-600 dark:text-gray-400">
               No hay contratos en disputa actualmente.
             </p>
