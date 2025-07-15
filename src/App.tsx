@@ -8,9 +8,10 @@ import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import ClientDashboard from "./pages/ClientDashboard";
 import ProviderDashboard from "./pages/ProviderDashboard";
+import AdminDashboard from "./pages/AdminDashboard"; // Importar AdminDashboard
 import { AuthProvider } from "@/context/AuthContext";
 import { ChatProvider } from "@/context/ChatContext";
-import { ContractProvider } from "@/context/ContractContext"; // Importar ContractProvider
+import { ContractProvider } from "@/context/ContractContext";
 
 const queryClient = new QueryClient();
 
@@ -22,12 +23,13 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <ChatProvider>
-            <ContractProvider> {/* Envolver con ContractProvider */}
+            <ContractProvider>
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/client-dashboard" element={<ClientDashboard />} />
                 <Route path="/provider-dashboard" element={<ProviderDashboard />} />
+                <Route path="/admin-dashboard" element={<AdminDashboard />} /> {/* Nueva ruta para AdminDashboard */}
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>

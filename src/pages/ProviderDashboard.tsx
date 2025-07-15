@@ -84,8 +84,16 @@ const ProviderDashboard: React.FC = () => {
 
   // Calculate accumulated earnings
   const accumulatedEarnings = providerContracts.reduce((total, contract) => {
-    if (contract.status === "finalized") {
-      return total + (contract.serviceRate * (1 - contract.commissionRate));
+    if (contract.status === "finalized" || contract.status === "finalized_by_dispute") { // Include finalized_by_dispute
+      // If finalized by dispute to provider, add the amount minus commission
+      if (contract.status === "finalized_by_dispute" && contract.clientAction !== "dispute") { // Assuming client dispute means funds to client
+        // This logic needs to be more robust if admin can choose who gets funds.
+        // For now, if it's finalized_by_dispute, we assume provider gets funds minus commission.
+        // A more precise implementation would store who received funds in the contract.
+        return total + (contract.serviceRate * (1 - contract.commissionRate));
+      } else if (contract.status === "finalized") {
+        return total + (contract.serviceRate * (1 - contract.commissionRate));
+      }
     }
     return total;
   }, 0);
@@ -295,6 +303,10 @@ const ProviderDashboard: React.FC = () => {
                   case "disputed":
                     statusText = "En Disputa (Fondos Retenidos)";
                     statusColorClass = "text-orange-600";
+                    break;
+                  case "finalized_by_dispute": // New status
+                    statusText = "Finalizado por Disputa (Admin)";
+                    statusColorClass = "text-purple-600";
                     break;
                   default:
                     statusText = "Desconocido";

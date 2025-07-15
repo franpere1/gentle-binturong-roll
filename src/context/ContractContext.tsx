@@ -14,6 +14,7 @@ interface ContractContextType {
   ) => Contract | null;
   depositFunds: (contractId: string) => boolean;
   handleContractAction: (contractId: string, actorId: string, actionType: 'finalize' | 'cancel' | 'dispute') => void; // Nueva función
+  resolveDispute: (contractId: string, resolutionType: 'toClient' | 'toProvider') => void; // Nueva función para admin
   getContractsForUser: (userId: string) => Contract[];
   hasActiveOrPendingContract: (clientId: string, providerId: string) => boolean;
   getLatestContractBetweenUsers: (user1Id: string, user2Id: string) => Contract | null;
@@ -119,7 +120,7 @@ export const ContractProvider: React.FC<ContractProviderProps> = ({ children }) 
         let updatedContract = { ...contract, updatedAt: Date.now() };
 
         // Check if contract is already in a final state
-        if (updatedContract.status === "finalized" || updatedContract.status === "cancelled" || updatedContract.status === "disputed") {
+        if (updatedContract.status === "finalized" || updatedContract.status === "cancelled" || updatedContract.status === "disputed" || updatedContract.status === "finalized_by_dispute") {
           showError("Este contrato ya ha sido finalizado, cancelado o está en disputa.");
           return contract;
         }
@@ -199,6 +200,26 @@ export const ContractProvider: React.FC<ContractProviderProps> = ({ children }) 
     });
   };
 
+  const resolveDispute = (contractId: string, resolutionType: 'toClient' | 'toProvider') => {
+    setContracts((prevContracts) => {
+      return prevContracts.map((contract) => {
+        if (contract.id === contractId && contract.status === "disputed") {
+          let message = "";
+          if (resolutionType === "toClient") {
+            message = `Disputa resuelta para "${contract.serviceTitle}". Fondos (${contract.serviceRate.toFixed(2)} USD) liberados al cliente.`;
+          } else {
+            const amountToProvider = contract.serviceRate * (1 - contract.commissionRate);
+            message = `Disputa resuelta para "${contract.serviceTitle}". Fondos (${amountToProvider.toFixed(2)} USD) liberados al proveedor (menos comisión).`;
+          }
+          showSuccess(message);
+          clearConversationMessages(contract.clientId, contract.providerId); // Clear chat on dispute resolution
+          return { ...contract, status: "finalized_by_dispute", updatedAt: Date.now() };
+        }
+        return contract;
+      });
+    });
+  };
+
   const getContractsForUser = (userId: string): Contract[] => {
     return contracts.filter(
       (contract) => contract.clientId === userId || contract.providerId === userId
@@ -212,6 +233,7 @@ export const ContractProvider: React.FC<ContractProviderProps> = ({ children }) 
         createContract,
         depositFunds,
         handleContractAction,
+        resolveDispute, // Añadir la nueva función al contexto
         getContractsForUser,
         hasActiveOrPendingContract,
         getLatestContractBetweenUsers,

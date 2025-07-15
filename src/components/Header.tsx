@@ -14,15 +14,23 @@ const Header: React.FC = () => {
     navigate("/auth"); // Redirigir a la página de autenticación después de cerrar sesión
   };
 
+  const getDashboardPath = () => {
+    if (!currentUser) return "/";
+    if (currentUser.type === "client") return "/client-dashboard";
+    if (currentUser.type === "provider") return "/provider-dashboard";
+    if (currentUser.type === "admin") return "/admin-dashboard"; // Ruta para el admin
+    return "/";
+  };
+
   return (
     <header className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-      <Link to={currentUser ? (currentUser.type === "client" ? "/client-dashboard" : "/provider-dashboard") : "/"}>
+      <Link to={getDashboardPath()}>
         <Logo />
       </Link>
       {currentUser ? (
         <div className="flex items-center space-x-4">
           <span className="text-gray-700 dark:text-gray-300">
-            Hola, {currentUser.name} ({currentUser.type === "client" ? "Cliente" : "Proveedor"})
+            Hola, {currentUser.name} ({currentUser.type === "client" ? "Cliente" : currentUser.type === "provider" ? "Proveedor" : "Administrador"})
           </span>
           <Button onClick={handleLogout} variant="outline"> {/* Usar handleLogout */}
             Cerrar Sesión

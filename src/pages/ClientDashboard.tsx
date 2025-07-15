@@ -253,7 +253,8 @@ const ClientDashboard: React.FC = () => {
                   contract.clientAction === "none" &&
                   contract.status !== "finalized" &&
                   contract.status !== "cancelled" &&
-                  contract.status !== "disputed";
+                  contract.status !== "disputed" &&
+                  contract.status !== "finalized_by_dispute"; // Added new status
 
                 let statusText = "";
                 let statusColorClass = "";
@@ -292,6 +293,10 @@ const ClientDashboard: React.FC = () => {
                   case "disputed":
                     statusText = "En Disputa (Fondos Retenidos)";
                     statusColorClass = "text-orange-600";
+                    break;
+                  case "finalized_by_dispute": // New status
+                    statusText = "Finalizado por Disputa (Admin)";
+                    statusColorClass = "text-purple-600";
                     break;
                   default:
                     statusText = "Desconocido";
@@ -345,7 +350,7 @@ const ClientDashboard: React.FC = () => {
                           </Button>
                         )}
                         {/* Display message if client has acted or is waiting for provider to act first */}
-                        {!canClientFinalize && !canClientCancel && !canClientDispute && contract.status !== "finalized" && contract.status !== "cancelled" && contract.status !== "disputed" && (
+                        {!canClientFinalize && !canClientCancel && !canClientDispute && contract.status !== "finalized" && contract.status !== "cancelled" && contract.status !== "disputed" && contract.status !== "finalized_by_dispute" && (
                           <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
                             {contract.clientAction !== "none" ? "Esperando acción de la otra parte." : "Esperando acción del proveedor."}
                           </p>

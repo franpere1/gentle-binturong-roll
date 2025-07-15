@@ -15,6 +15,8 @@ const Index = () => {
           navigate("/client-dashboard");
         } else if (currentUser.type === "provider") {
           navigate("/provider-dashboard");
+        } else if (currentUser.type === "admin") { // Redirigir al admin
+          navigate("/admin-dashboard");
         }
       } else {
         navigate("/auth");
