@@ -51,12 +51,12 @@ const AdminDashboard: React.FC = () => {
 
   // Apply limits for display
   const displayedDisputedContracts = useMemo(() => {
-    return searchTermDisputes ? sortedDisputedContracts : sortedDisputedContracts.slice(0, activeDisputesLimit);
-  }, [sortedDisputedContracts, searchTermDisputes, activeDisputesLimit]);
+    return sortedDisputedContracts.slice(0, activeDisputesLimit);
+  }, [sortedDisputedContracts, activeDisputesLimit]);
 
   const displayedResolvedDisputes = useMemo(() => {
-    return searchTermDisputes ? sortedResolvedDisputes : sortedResolvedDisputes.slice(0, resolvedDisputesLimit);
-  }, [sortedResolvedDisputes, searchTermDisputes, resolvedDisputesLimit]);
+    return sortedResolvedDisputes.slice(0, resolvedDisputesLimit);
+  }, [sortedResolvedDisputes, resolvedDisputesLimit]);
 
   const handleLoadMoreActiveDisputes = () => {
     setActiveDisputesLimit(prevLimit => prevLimit + LOAD_MORE_AMOUNT);
@@ -183,7 +183,7 @@ const AdminDashboard: React.FC = () => {
               })}
             </div>
           )}
-          {!searchTermDisputes && displayedDisputedContracts.length < sortedDisputedContracts.length && (
+          {displayedDisputedContracts.length < sortedDisputedContracts.length && (
             <div className="text-center mt-6">
               <Button onClick={handleLoadMoreActiveDisputes} variant="outline">
                 Cargar más disputas activas ({sortedDisputedContracts.length - displayedDisputedContracts.length} restantes)
@@ -241,7 +241,7 @@ const AdminDashboard: React.FC = () => {
               })}
             </div>
           )}
-          {!searchTermDisputes && displayedResolvedDisputes.length < sortedResolvedDisputes.length && (
+          {displayedResolvedDisputes.length < sortedResolvedDisputes.length && (
             <div className="text-center mt-6">
               <Button onClick={handleLoadMoreResolvedDisputes} variant="outline">
                 Cargar más disputas resueltas ({sortedResolvedDisputes.length - displayedResolvedDisputes.length} restantes)
