@@ -73,7 +73,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Cargar currentUser desde localStorage al montar el componente
     const storedCurrentUser = localStorage.getItem("currentUser");
     if (storedCurrentUser) {
-      setCurrentUser(JSON.parse(storedCurrentUser));
+      let parsedUser = JSON.parse(storedCurrentUser);
+      // Special handling for the admin user to ensure correct type
+      if (parsedUser.email === "admin@admin.com" && parsedUser.type !== "admin") {
+        console.warn("Correcting admin user type from localStorage.");
+        parsedUser = { ...parsedUser, type: "admin" };
+      }
+      setCurrentUser(parsedUser);
     }
     setIsLoading(false); // Una vez cargado (o no encontrado), se termina la carga
   }, []); // Se ejecuta solo una vez al montar
