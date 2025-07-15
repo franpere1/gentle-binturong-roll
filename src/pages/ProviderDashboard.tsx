@@ -278,8 +278,13 @@ const ProviderDashboard: React.FC = () => {
                 // Provider can make an offer if contract is pending and no offer has been made
                 const canProviderMakeOffer = contract.status === "pending" && contract.providerAction === "none";
                 
-                // Provider can finalize if contract is active, client has deposited, and client has finalized
-                const canProviderFinalize = contract.status === "active" && contract.clientDeposited && contract.clientAction === "finalize" && contract.providerAction === "none";
+                // Provider can finalize if contract is active, client has deposited, and provider hasn't finalized their side yet
+                const canProviderFinalize = 
+                  contract.status === "active" && 
+                  contract.clientDeposited && 
+                  contract.providerAction === "none" &&
+                  contract.clientAction !== "cancel" && // Cannot finalize if client cancelled
+                  contract.clientAction !== "dispute"; // Cannot finalize if client disputed
                 
                 // Provider can cancel if contract is pending or active, and provider hasn't acted yet (or only made offer)
                 const canProviderCancel = 
