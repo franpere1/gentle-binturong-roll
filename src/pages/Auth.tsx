@@ -109,12 +109,14 @@ const ClientRegistrationForm: React.FC = () => {
   const [state, setState] = useState("");
   const [password, setPassword] = useState("");
   const { registerClient } = useAuth();
-  // No need for navigate here, Index.tsx handles redirection based on currentUser
+  const navigate = useNavigate(); // Importar useNavigate
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    registerClient({ id: "", name, email, state, password, type: "client" });
-    // Redirection is now handled by the Index.tsx component based on currentUser state
+    const success = registerClient({ id: "", name, email, state, password, type: "client" });
+    if (success) {
+      navigate("/client-dashboard"); // Redirigir directamente
+    }
   };
 
   return (
@@ -182,7 +184,7 @@ const ProviderRegistrationForm: React.FC = () => {
   const [password, setPassword] = useState("");
   const [rate, setRate] = useState<number | ''>(''); // Nuevo estado para la tarifa
   const { registerProvider } = useAuth();
-  // No need for navigate here, Index.tsx handles redirection based on currentUser
+  const navigate = useNavigate(); // Importar useNavigate
 
   const serviceCategories: ServiceCategory[] = [
     "Plomería",
@@ -209,7 +211,7 @@ const ProviderRegistrationForm: React.FC = () => {
       return;
     }
 
-    registerProvider({
+    const success = registerProvider({
       id: "",
       name,
       email,
@@ -222,7 +224,9 @@ const ProviderRegistrationForm: React.FC = () => {
       serviceImage,
       rate: Number(rate), // Incluir la tarifa
     });
-    // Redirection is now handled by the Index.tsx component based on currentUser state
+    if (success) {
+      navigate("/provider-dashboard"); // Redirigir directamente
+    }
   };
 
   return (
