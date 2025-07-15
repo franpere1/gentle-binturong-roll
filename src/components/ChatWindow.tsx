@@ -30,16 +30,34 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ otherUser, contractStatus }) =>
       const isPrePaymentChat = contractStatus === "pending" || contractStatus === "offered" || contractStatus === "initial_contact";
 
       if (isPrePaymentChat) {
-        // Rule 1: More than 3 consecutive digits
-        const consecutiveNumbersRegex = /\d{4,}/g; // 4 or more digits
-        if (consecutiveNumbersRegex.test(messageToSend)) {
-          messageToSend = messageToSend.replace(consecutiveNumbersRegex, (match) => {
+        // Rule 1: Mask email local part (before @)
+        const emailLocalPartRegex = /\b[A-Za-z0-9._%+-]+(@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,})\b/g;
+        if (emailLocalPartRegex.test(messageToSend)) {
+          messageToSend = messageToSend.replace(emailLocalPartRegex, (match, domainPart) => {
+            masked = true;
+            return '*'.repeat(match.length - domainPart.length) + domainPart;
+          });
+        }
+
+        // Rule 2: Mask social media handles (@username)
+        const socialHandleRegex = /(^|\s)@([a-zA-Z0-9_.]+)\b/g;
+        if (socialHandleRegex.test(messageToSend)) {
+          messageToSend = messageToSend.replace(socialHandleRegex, (match, p1, p2) => {
+            masked = true;
+            return `${p1}@[OCULTO]`;
+          });
+        }
+
+        // Rule 3: Mask phone numbers (7 or more consecutive digits)
+        const phoneNumbersRegex = /\b\d{7,}\b/g;
+        if (phoneNumbersRegex.test(messageToSend)) {
+          messageToSend = messageToSend.replace(phoneNumbersRegex, (match) => {
             masked = true;
             return '*'.repeat(match.length);
           });
         }
 
-        // Rule 2: Two consecutive words that indicate numbers
+        // Rule 4: Two consecutive words that indicate numbers
         const numberWords = [
           "cero", "uno", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve",
           "diez", "once", "doce", "trece", "catorce", "quince", "dieciséis", "diecisiete", "dieciocho", "diecinueve",
@@ -55,13 +73,22 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ otherUser, contractStatus }) =>
             return '*'.repeat(match.length); // Replace with asterisks of same length
           });
         }
+
+        // Rule 5: Mask URLs/Links
+        const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+|[a-zA-Z0-9-]+\.(com|org|net|ve|co|es)[^\s]*)/g;
+        if (urlRegex.test(messageToSend)) {
+          messageToSend = messageToSend.replace(urlRegex, () => {
+            masked = true;
+            return '[LINK OCULTO]';
+          });
+        }
       }
 
       sendMessage(otherUser.id, messageToSend);
       setMessageInput("");
 
       if (masked) {
-        showError("Se detectó información sensible (números o palabras numéricas) y fue ocultada para proteger tu privacidad y la de otros usuarios antes de que se realice el pago.");
+        showError("Se detectó información sensible (contactos, números o enlaces) y fue ocultada para proteger tu privacidad y la de otros usuarios antes de que se realice el pago.");
       }
     }
   };
