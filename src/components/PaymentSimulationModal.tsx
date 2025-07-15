@@ -25,7 +25,8 @@ const PaymentSimulationModal: React.FC<PaymentSimulationModalProps> = ({
   initialAmount,
   onConfirm,
 }) => {
-  const [negotiatedAmount, setNegotiatedAmount] = useState<number | string>(initialAmount);
+  // El monto negociado ahora siempre será el initialAmount, ya que no es editable
+  const negotiatedAmount = initialAmount;
 
   const handleConfirmPayment = () => {
     const finalAmount = parseFloat(String(negotiatedAmount));
@@ -43,7 +44,7 @@ const PaymentSimulationModal: React.FC<PaymentSimulationModalProps> = ({
         <DialogHeader>
           <DialogTitle>Simulación de Pasarela de Pago</DialogTitle>
           <DialogDescription>
-            Estás a punto de depositar fondos para el servicio. Puedes ajustar el monto si es necesario.
+            Estás a punto de depositar fondos para el servicio. El monto es el acordado con el proveedor.
           </DialogDescription>
         </DialogHeader>
         <div className="py-4 space-y-4">
@@ -55,13 +56,9 @@ const PaymentSimulationModal: React.FC<PaymentSimulationModalProps> = ({
             <Input
               id="payment-amount"
               type="number"
-              value={negotiatedAmount}
-              onChange={(e) => setNegotiatedAmount(e.target.value)}
-              placeholder="Ingresa el monto"
-              required
-              min="0.01"
-              step="0.01"
-              className="mt-1"
+              value={negotiatedAmount.toFixed(2)} // Mostrar con 2 decimales
+              readOnly // Hacer el campo de solo lectura
+              className="mt-1 font-bold text-lg" // Estilo para resaltar que es fijo
             />
           </div>
           <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -69,7 +66,7 @@ const PaymentSimulationModal: React.FC<PaymentSimulationModalProps> = ({
           </p>
         </div>
         <div className="flex justify-end">
-          <Button onClick={handleConfirmPayment} className="w-full" disabled={!negotiatedAmount || parseFloat(String(negotiatedAmount)) <= 0}>
+          <Button onClick={handleConfirmPayment} className="w-full">
             Confirmar Pago
           </Button>
         </div>
