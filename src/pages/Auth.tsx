@@ -17,7 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Header from "@/components/Header";
 import { MadeWithDyad } from "@/components/made-with-dyad";
-import { showError } from "@/utils/toast";
+import { showError, showSuccess } from "@/utils/toast";
 
 const Auth: React.FC = () => {
   const [activeTab, setActiveTab] = useState("login");
@@ -108,15 +108,31 @@ const ClientRegistrationForm: React.FC = () => {
   const [email, setEmail] = useState("");
   const [state, setState] = useState("");
   const [password, setPassword] = useState("");
-  const [profileImage, setProfileImage] = useState(""); // Nuevo estado para la imagen de perfil
+  const [profileImage, setProfileImage] = useState("");
   const { registerClient } = useAuth();
-  const navigate = useNavigate(); // Importar useNavigate
+  const navigate = useNavigate();
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 1024 * 1024) { // 1MB limit
+        showError("La imagen es demasiado grande. El tamaño máximo es 1MB.");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfileImage(reader.result as string);
+        showSuccess("Imagen seleccionada correctamente.");
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const success = registerClient({ id: "", name, email, state, password, type: "client", profileImage }); // Incluir profileImage
+    const success = registerClient({ id: "", name, email, state, password, type: "client", profileImage });
     if (success) {
-      navigate("/client-dashboard"); // Redirigir directamente
+      navigate("/client-dashboard");
     }
   };
 
@@ -158,14 +174,20 @@ const ClientRegistrationForm: React.FC = () => {
         </Select>
       </div>
       <div>
-        <Label htmlFor="client-profile-image">URL de Imagen de Perfil (opcional)</Label>
+        <Label htmlFor="client-profile-image">Subir Imagen de Perfil (opcional, máx. 1MB)</Label>
         <Input
           id="client-profile-image"
-          type="text"
-          value={profileImage}
-          onChange={(e) => setProfileImage(e.target.value)}
-          placeholder="Ej: https://ejemplo.com/mi-foto.jpg"
+          type="file"
+          accept="image/*"
+          onChange={handleImageChange}
+          className="mt-1"
         />
+        {profileImage && (
+          <div className="mt-4 flex flex-col items-center">
+            <Label className="mb-2">Previsualización de Imagen:</Label>
+            <img src={profileImage} alt="Previsualización de Perfil" className="w-24 h-24 object-cover rounded-full border-2 border-gray-300 dark:border-gray-600" />
+          </div>
+        )}
       </div>
       <div>
         <Label htmlFor="client-password">Contraseña</Label>
@@ -191,12 +213,12 @@ const ProviderRegistrationForm: React.FC = () => {
   const [category, setCategory] = useState<ServiceCategory | "">("");
   const [serviceTitle, setServiceTitle] = useState("");
   const [serviceDescription, setServiceDescription] = useState("");
-  const [serviceImage, setServiceImage] = useState(""); // For demo, just a URL/text
+  const [serviceImage, setServiceImage] = useState("");
   const [password, setPassword] = useState("");
-  const [rate, setRate] = useState<number | ''>(''); // Nuevo estado para la tarifa
-  const [profileImage, setProfileImage] = useState(""); // Nuevo estado para la imagen de perfil
+  const [rate, setRate] = useState<number | ''>('');
+  const [profileImage, setProfileImage] = useState("");
   const { registerProvider } = useAuth();
-  const navigate = useNavigate(); // Importar useNavigate
+  const navigate = useNavigate();
 
   const serviceCategories: ServiceCategory[] = [
     "Plomería",
@@ -207,6 +229,22 @@ const ProviderRegistrationForm: React.FC = () => {
     "Electricista",
     "Servicios digitales",
   ];
+
+  const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 1024 * 1024) { // 1MB limit
+        showError("La imagen es demasiado grande. El tamaño máximo es 1MB.");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfileImage(reader.result as string);
+        showSuccess("Imagen seleccionada correctamente.");
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -234,11 +272,11 @@ const ProviderRegistrationForm: React.FC = () => {
       serviceTitle,
       serviceDescription,
       serviceImage,
-      rate: Number(rate), // Incluir la tarifa
-      profileImage, // Incluir profileImage
+      rate: Number(rate),
+      profileImage,
     });
     if (success) {
-      navigate("/provider-dashboard"); // Redirigir directamente
+      navigate("/provider-dashboard");
     }
   };
 
@@ -311,7 +349,7 @@ const ProviderRegistrationForm: React.FC = () => {
           id="provider-service-description"
           value={serviceDescription}
           onChange={(e) => setServiceDescription(e.target.value)}
-          maxLength={50} // A bit more than 5 words to allow for longer words, but still brief
+          maxLength={50}
           required
         />
       </div>
@@ -339,14 +377,20 @@ const ProviderRegistrationForm: React.FC = () => {
         />
       </div>
       <div>
-        <Label htmlFor="provider-profile-image">URL de Imagen de Perfil (opcional)</Label>
+        <Label htmlFor="provider-profile-image">Subir Imagen de Perfil (opcional, máx. 1MB)</Label>
         <Input
           id="provider-profile-image"
-          type="text"
-          value={profileImage}
-          onChange={(e) => setProfileImage(e.target.value)}
-          placeholder="Ej: https://ejemplo.com/mi-foto.jpg"
+          type="file"
+          accept="image/*"
+          onChange={handleProfileImageChange}
+          className="mt-1"
         />
+        {profileImage && (
+          <div className="mt-4 flex flex-col items-center">
+            <Label className="mb-2">Previsualización de Imagen:</Label>
+            <img src={profileImage} alt="Previsualización de Perfil" className="w-24 h-24 object-cover rounded-full border-2 border-gray-300 dark:border-gray-600" />
+          </div>
+        )}
       </div>
       <div>
         <Label htmlFor="provider-password">Contraseña</Label>
