@@ -126,7 +126,7 @@ const ProviderDashboard: React.FC = () => {
                 <span className="font-medium">Descripción:</span> {provider.serviceDescription}
               </p>
               <p className="mb-2">
-                <span className="font-medium">Tarifa:</span> ${provider.rate.toFixed(2)} USD
+                <span className="font-medium">Tarifa:</span> ${provider.rate?.toFixed(2) || '0.00'} USD
               </p>
               {provider.serviceImage && (
                 <div className="mt-4">

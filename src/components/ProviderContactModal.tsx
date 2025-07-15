@@ -109,7 +109,7 @@ const ProviderContactModal: React.FC<ProviderContactModalProps> = ({
                 <span className="font-medium">Descripción:</span> {provider.serviceDescription}
               </p>
               <p>
-                <span className="font-medium">Tarifa Sugerida:</span> ${provider.rate.toFixed(2)} USD
+                <span className="font-medium">Tarifa Sugerida:</span> ${provider.rate?.toFixed(2) || '0.00'} USD
               </p>
               {provider.serviceImage && (
                 <div className="mt-2">
@@ -145,7 +145,7 @@ const ProviderContactModal: React.FC<ProviderContactModalProps> = ({
           isOpen={isPaymentModalOpen}
           onClose={() => setIsPaymentModalOpen(false)}
           serviceTitle={provider.serviceTitle}
-          initialAmount={provider.rate} // Pasa la tarifa sugerida inicial
+          initialAmount={provider.rate || 0} // Pasa la tarifa sugerida inicial, o 0 si es indefinida
           onConfirm={handlePaymentConfirmed}
         />
       )}
