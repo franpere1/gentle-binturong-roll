@@ -301,7 +301,7 @@ const ClientDashboard: React.FC = () => {
                   contract.status === "active" && 
                   contract.clientDeposited && 
                   contract.clientAction === "accept_offer" && 
-                  contract.providerAction === "none";
+                  contract.providerAction === "make_offer"; // Corrected condition
 
                 let statusText = "";
                 let statusColorClass = "";
