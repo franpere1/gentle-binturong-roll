@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/card";
 import ProviderProfileEditor from "@/components/ProviderProfileEditor";
 import { Star } from "lucide-react"; // Importar el icono de estrella
+import { ScrollArea } from "@/components/ui/scroll-area"; // Importar ScrollArea
 
 const ProviderDashboard: React.FC = () => {
   const { currentUser } = useAuth();
@@ -98,18 +99,20 @@ const ProviderDashboard: React.FC = () => {
                 {(provider.feedback || []).length > 0 && (
                   <div className="mt-4">
                     <h4 className="font-semibold mb-2">Comentarios Recientes:</h4>
-                    <ul className="list-disc list-inside text-sm text-gray-600 dark:text-gray-400">
-                      {(provider.feedback || []).slice(-3).reverse().map((f, index) => ( // Mostrar los 3 últimos comentarios
-                        <li key={index}>
-                          <span className={`font-medium ${
-                            f.type === "positive" ? "text-green-600" :
-                            f.type === "negative" ? "text-red-600" : "text-gray-500"
-                          }`}>
-                            {f.type === "positive" ? "Positivo" : f.type === "negative" ? "Negativo" : "Neutro"}
-                          </span>: "{f.comment}"
-                        </li>
-                      ))}
-                    </ul>
+                    <ScrollArea className="h-40 w-full rounded-md border p-4"> {/* ScrollArea añadida aquí */}
+                      <ul className="list-disc list-inside text-sm text-gray-600 dark:text-gray-400">
+                        {(provider.feedback || []).slice(-3).reverse().map((f, index) => ( // Mostrar los 3 últimos comentarios
+                          <li key={index}>
+                            <span className={`font-medium ${
+                              f.type === "positive" ? "text-green-600" :
+                              f.type === "negative" ? "text-red-600" : "text-gray-500"
+                            }`}>
+                              {f.type === "positive" ? "Positivo" : f.type === "negative" ? "Negativo" : "Neutro"}
+                            </span>: "{f.comment}"
+                          </li>
+                        ))}
+                      </ul>
+                    </ScrollArea>
                   </div>
                 )}
               </div>
