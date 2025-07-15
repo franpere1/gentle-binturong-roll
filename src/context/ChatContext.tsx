@@ -6,7 +6,9 @@ interface ChatContextType {
   messages: Message[];
   sendMessage: (receiverId: string, text: string) => void;
   getMessagesForConversation: (otherUserId: string) => Message[];
-  clearConversationMessages: (user1Id: string, user2Id: string) => void; // Nueva función
+  clearConversationMessages: (user1Id: string, user2Id: string) => void;
+  markMessagesAsRead: (otherUserId: string) => void; // Nueva función
+  hasUnreadMessages: (otherUserId: string) => boolean; // Nueva función
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -40,6 +42,7 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
       receiverId: receiverId,
       text,
       timestamp: Date.now(),
+      readBy: [], // Inicializar como no leído por nadie
     };
 
     setAllMessages((prevMessages) => [...prevMessages, newMessage]);
@@ -68,8 +71,40 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
     );
   };
 
+  const markMessagesAsRead = (otherUserId: string) => {
+    if (!currentUser) return;
+
+    setAllMessages((prevMessages) =>
+      prevMessages.map((msg) => {
+        // Mark messages sent by the other user to the current user as read
+        if (
+          msg.senderId === otherUserId &&
+          msg.receiverId === currentUser.id &&
+          !msg.readBy?.includes(currentUser.id)
+        ) {
+          return {
+            ...msg,
+            readBy: [...(msg.readBy || []), currentUser.id],
+          };
+        }
+        return msg;
+      })
+    );
+  };
+
+  const hasUnreadMessages = (otherUserId: string): boolean => {
+    if (!currentUser) return false;
+
+    return allMessages.some(
+      (msg) =>
+        msg.senderId === otherUserId &&
+        msg.receiverId === currentUser.id &&
+        !msg.readBy?.includes(currentUser.id)
+    );
+  };
+
   return (
-    <ChatContext.Provider value={{ messages: allMessages, sendMessage, getMessagesForConversation, clearConversationMessages }}>
+    <ChatContext.Provider value={{ messages: allMessages, sendMessage, getMessagesForConversation, clearConversationMessages, markMessagesAsRead, hasUnreadMessages }}>
       {children}
     </ChatContext.Provider>
   );

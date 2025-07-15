@@ -93,6 +93,7 @@ export interface Message {
   receiverId: string;
   text: string;
   timestamp: number;
+  readBy?: string[]; // Nuevo campo para rastrear quién ha leído el mensaje
 }
 
 export interface Contract {

@@ -3,6 +3,7 @@ import Header from "@/components/Header";
 import { MadeWithDyad } from "@/components/made-with-dyad";
 import { useAuth } from "@/context/AuthContext";
 import { useContracts } from "@/context/ContractContext";
+import { useChat } from "@/context/ChatContext"; // Import useChat
 import { Client, Provider, Contract } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,12 +26,13 @@ import ClientProfileEditor from "@/components/ClientProfileEditor";
 import ContractCompletionModal from "@/components/ContractCompletionModal";
 import PaymentSimulationModal from "@/components/PaymentSimulationModal";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import ChatWindow from "@/components/ChatWindow"; // Import ChatWindow
-import { showError } from "@/utils/toast"; // Import showError
+import ChatWindow from "@/components/ChatWindow";
+import { showError } from "@/utils/toast";
 
 const ClientDashboard: React.FC = () => {
   const { currentUser, getAllProviders } = useAuth();
   const { getContractsForUser, handleContractAction, depositFunds, contracts, createContract } = useContracts();
+  const { hasUnreadMessages } = useChat(); // Use hasUnreadMessages
   const client = currentUser as Client;
   const [isEditing, setIsEditing] = useState(false);
   const [searchTermProviders, setSearchTermProviders] = useState("");
@@ -40,9 +42,9 @@ const ClientDashboard: React.FC = () => {
   const [contractToFinalize, setContractToFinalize] = useState<Contract | null>(null);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [contractToPay, setContractToPay] = useState<Contract | null>(null);
-  const [isContractChatModalOpen, setIsContractChatModalOpen] = useState(false); // New state for contract chat modal
-  const [chattingWithProvider, setChattingWithProvider] = useState<Provider | null>(null); // New state for provider in chat
-  const [chatContractStatus, setChatContractStatus] = useState<Contract['status'] | 'initial_contact' | undefined>(undefined); // New state for chat contract status
+  const [isContractChatModalOpen, setIsContractChatModalOpen] = useState(false);
+  const [chattingWithProvider, setChattingWithProvider] = useState<Provider | null>(null);
+  const [chatContractStatus, setChatContractStatus] = useState<Contract['status'] | 'initial_contact' | undefined>(undefined);
 
   const allProviders = getAllProviders();
   const clientContracts = client ? getContractsForUser(client.id) : [];
@@ -179,7 +181,7 @@ const ClientDashboard: React.FC = () => {
     const provider = allProviders.find(p => p.id === contract.providerId);
     if (provider) {
       setChattingWithProvider(provider);
-      setChatContractStatus(contract.status); // Pass the actual contract status
+      setChatContractStatus(contract.status);
       setIsContractChatModalOpen(true);
     }
   };
@@ -268,6 +270,7 @@ const ClientDashboard: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {displayedContracts.map((contract) => {
                 const provider = allProviders.find(p => p.id === contract.providerId);
+                const hasNewMessages = provider ? hasUnreadMessages(provider.id) : false; // Check for unread messages
                 
                 // Client can accept offer if contract is 'offered' and client hasn't acted
                 const canClientAcceptOffer = contract.status === "offered" && contract.clientAction === "none";
@@ -307,7 +310,7 @@ const ClientDashboard: React.FC = () => {
                   contract.status === "active" && 
                   contract.clientDeposited && 
                   contract.clientAction === "accept_offer" && 
-                  contract.providerAction === "none"; // Changed from 'make_offer' to 'none' as 'make_offer' is provider's initial action
+                  contract.providerAction === "none";
 
                 // Client can chat if contract is active or disputed and client has deposited
                 const canClientChat = (contract.status === "pending" || contract.status === "offered" || contract.status === "active" || contract.status === "disputed");
@@ -424,8 +427,11 @@ const ClientDashboard: React.FC = () => {
                           </Button>
                         )}
                         {canClientChat && provider && (
-                          <Button className="w-full" onClick={() => handleChatWithProvider(contract)}>
-                            Chatear
+                          <Button 
+                            className={`w-full ${hasNewMessages ? 'btn-new-message-pulse' : ''}`} 
+                            onClick={() => handleChatWithProvider(contract)}
+                          >
+                            {hasNewMessages ? 'Mensaje Nuevo' : 'Chatear'}
                           </Button>
                         )}
                         {canClientDispute && (

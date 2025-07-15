@@ -14,11 +14,18 @@ interface ChatWindowProps {
 
 const ChatWindow: React.FC<ChatWindowProps> = ({ otherUser, contractStatus }) => {
   const { currentUser } = useAuth();
-  const { sendMessage, getMessagesForConversation } = useChat();
+  const { sendMessage, getMessagesForConversation, markMessagesAsRead } = useChat(); // Import markMessagesAsRead
   const [messageInput, setMessageInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const conversationMessages = getMessagesForConversation(otherUser.id);
+
+  // Mark messages as read when the chat window is opened or messages change
+  useEffect(() => {
+    if (currentUser && otherUser) {
+      markMessagesAsRead(otherUser.id);
+    }
+  }, [currentUser, otherUser, conversationMessages, markMessagesAsRead]); // Added conversationMessages as dependency
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,25 +37,25 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ otherUser, contractStatus }) =>
       const isPrePaymentChat = contractStatus === "pending" || contractStatus === "offered" || contractStatus === "initial_contact";
 
       if (isPrePaymentChat) {
-        // Rule 1: Mask email local part (before @)
-        const emailLocalPartRegex = /\b[A-Za-z0-9._%+-]+(@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,})\b/g;
-        if (emailLocalPartRegex.test(messageContent)) {
+        // Rule 1: Email addresses
+        const emailRegex = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g;
+        if (emailRegex.test(messageContent)) {
           containsSensitiveInfo = true;
         }
 
-        // Rule 2: Mask social media handles (@username)
+        // Rule 2: Social media handles (@username)
         const socialHandleRegex = /(^|\s)@([a-zA-Z0-9_.]+)\b/g;
         if (socialHandleRegex.test(messageContent)) {
           containsSensitiveInfo = true;
         }
 
-        // Rule 3: Mask phone numbers (7 or more consecutive digits)
+        // Rule 3: Phone numbers (7 or more consecutive digits)
         const phoneNumbersRegex = /\b\d{7,}\b/g;
         if (phoneNumbersRegex.test(messageContent)) {
           containsSensitiveInfo = true;
         }
 
-        // Rule 4: Two consecutive words that indicate numbers
+        // Rule 4: Two consecutive words that indicate numbers (e.g., "dos tres", "cinco mil")
         const numberWords = [
           "cero", "uno", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve",
           "diez", "once", "doce", "trece", "catorce", "quince", "dieciséis", "diecisiete", "dieciocho", "diecinueve",
@@ -62,13 +69,13 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ otherUser, contractStatus }) =>
           containsSensitiveInfo = true;
         }
 
-        // Rule 5: Mask URLs/Links
+        // Rule 5: URLs/Links
         const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+|[a-zA-Z0-9-]+\.(com|org|net|ve|co|es)[^\s]*)/g;
         if (urlRegex.test(messageContent)) {
           containsSensitiveInfo = true;
         }
 
-        // Rule 6: Mask specific keywords related to social media and contact info
+        // Rule 6: Specific keywords related to social media and contact info
         const sensitiveKeywords = [
           "instagram", "tiktok", "email", "telefono", "whatsapp", "facebook", "twitter",
           "telegram", "discord", "linkedin", "gmail", "hotmail", "outlook", "yahoo",

@@ -99,3 +99,18 @@
     @apply bg-background text-foreground;
   }
 }
+
+@keyframes pulse-new-message {
+  0%, 100% {
+    background-color: hsl(var(--primary)); /* Default button color */
+    color: hsl(var(--primary-foreground));
+  }
+  50% {
+    background-color: hsl(142.1 76.2% 36.3%); /* A vibrant green, e.g., from shadcn's success */
+    color: white;
+  }
+}
+
+.btn-new-message-pulse {
+  animation: pulse-new-message 1.5s infinite;
+}

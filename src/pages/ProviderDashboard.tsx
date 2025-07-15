@@ -3,7 +3,8 @@ import Header from "@/components/Header";
 import { MadeWithDyad } from "@/components/made-with-dyad";
 import { useAuth } from "@/context/AuthContext";
 import { useContracts } from "@/context/ContractContext";
-import { Provider, Contract, Client } from "@/types"; // Import Client type
+import { useChat } from "@/context/ChatContext"; // Import useChat
+import { Provider, Contract, Client } from "@/types";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -25,20 +26,21 @@ import ProviderProfileEditor from "@/components/ProviderProfileEditor";
 import { Star } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import MakeOfferModal from "@/components/MakeOfferModal"; // Import the new modal
-import ChatWindow from "@/components/ChatWindow"; // Import ChatWindow
+import MakeOfferModal from "@/components/MakeOfferModal";
+import ChatWindow from "@/components/ChatWindow";
 
 const ProviderDashboard: React.FC = () => {
   const { currentUser, findUserById } = useAuth();
-  const { getContractsForUser, handleContractAction, makeOffer, contracts } = useContracts(); // Add makeOffer
+  const { getContractsForUser, handleContractAction, makeOffer, contracts } = useContracts();
+  const { hasUnreadMessages } = useChat(); // Use hasUnreadMessages
   const provider = currentUser as Provider;
   const [isEditing, setIsEditing] = useState(false);
   const [searchTermContracts, setSearchTermContracts] = useState("");
-  const [isMakeOfferModalOpen, setIsMakeOfferModalOpen] = useState(false); // State for offer modal
-  const [contractToOffer, setContractToOffer] = useState<Contract | null>(null); // State to hold contract for offer
-  const [isContractChatModalOpen, setIsContractChatModalOpen] = useState(false); // New state for contract chat modal
-  const [chattingWithClient, setChattingWithClient] = useState<Client | null>(null); // New state for client in chat
-  const [chatContractStatus, setChatContractStatus] = useState<Contract['status'] | 'initial_contact' | undefined>(undefined); // New state for chat contract status
+  const [isMakeOfferModalOpen, setIsMakeOfferModalOpen] = useState(false);
+  const [contractToOffer, setContractToOffer] = useState<Contract | null>(null);
+  const [isContractChatModalOpen, setIsContractChatModalOpen] = useState(false);
+  const [chattingWithClient, setChattingWithClient] = useState<Client | null>(null);
+  const [chatContractStatus, setChatContractStatus] = useState<Contract['status'] | 'initial_contact' | undefined>(undefined);
 
   const providerContracts = provider ? getContractsForUser(provider.id) : [];
 
@@ -134,7 +136,7 @@ const ProviderDashboard: React.FC = () => {
     const client = findUserById(contract.clientId) as Client | undefined;
     if (client) {
       setChattingWithClient(client);
-      setChatContractStatus(contract.status); // Pass the actual contract status
+      setChatContractStatus(contract.status);
       setIsContractChatModalOpen(true);
     }
   };
@@ -286,7 +288,8 @@ const ProviderDashboard: React.FC = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {displayedContracts.map((contract) => {
-                const clientUser = findUserById(contract.clientId) as Client | undefined; // Cast to Client
+                const clientUser = findUserById(contract.clientId) as Client | undefined;
+                const hasNewMessages = clientUser ? hasUnreadMessages(clientUser.id) : false; // Check for unread messages
                 
                 // Provider can make an offer if contract is pending and no offer has been made
                 const canProviderMakeOffer = contract.status === "pending" && contract.providerAction === "none";
@@ -295,16 +298,16 @@ const ProviderDashboard: React.FC = () => {
                 const canProviderFinalize = 
                   contract.status === "active" && 
                   contract.clientDeposited && 
-                  contract.providerAction !== "finalize" && // Provider has not yet finalized
-                  contract.providerAction !== "cancel" && // Provider has not yet cancelled
-                  contract.clientAction !== "cancel" && // Client has not cancelled
-                  contract.clientAction !== "dispute"; // Client has not disputed
+                  contract.providerAction !== "finalize" &&
+                  contract.providerAction !== "cancel" &&
+                  contract.clientAction !== "cancel" &&
+                  contract.clientAction !== "dispute";
                 
                 // Provider can cancel if:
                 // Contract is active, client has deposited, and provider hasn't finalized or disputed
                 const canProviderCancel = 
-                  (contract.status === "pending" && contract.providerAction === "none") || // Pending, no action yet
-                  (contract.status === "offered" && contract.providerAction === "make_offer" && contract.clientAction === "none") || // Offered, provider made offer, client hasn't accepted/cancelled
+                  (contract.status === "pending" && contract.providerAction === "none") ||
+                  (contract.status === "offered" && contract.providerAction === "make_offer" && contract.clientAction === "none") ||
                   (contract.status === "active" && contract.clientDeposited && contract.providerAction !== "finalize" && contract.providerAction !== "cancel" && contract.clientAction !== "dispute" && contract.clientAction !== "finalize");
 
                 // Provider can chat if contract is active or disputed and client has deposited
@@ -426,8 +429,11 @@ const ProviderDashboard: React.FC = () => {
                           </Button>
                         )}
                         {canProviderChat && clientUser && (
-                          <Button className="w-full" onClick={() => handleChatWithClient(contract)}>
-                            Chatear
+                          <Button 
+                            className={`w-full ${hasNewMessages ? 'btn-new-message-pulse' : ''}`} 
+                            onClick={() => handleChatWithClient(contract)}
+                          >
+                            {hasNewMessages ? 'Mensaje Nuevo' : 'Chatear'}
                           </Button>
                         )}
                         {/* Display message if provider has acted or is waiting for client to act first */}
