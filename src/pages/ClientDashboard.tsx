@@ -274,7 +274,7 @@ const ClientDashboard: React.FC = () => {
                       statusText = "Activo (Esperando confirmación del proveedor)";
                       statusColorClass = "text-blue-600";
                     } else if (contract.providerAction === "finalize" && contract.clientAction === "none") {
-                      statusText = "Activo (Proveedor finalizó, esperando tu confirmación)";
+                      statusText = "Activo (Proveedor finalizó, esperando tu confirmación)"; // This is the key one
                       statusColorClass = "text-blue-600";
                     } else if (contract.clientAction === "cancel" && contract.providerAction === "none") {
                       statusText = "Cancelación iniciada (Esperando proveedor)";
@@ -282,7 +282,11 @@ const ClientDashboard: React.FC = () => {
                     } else if (contract.providerAction === "cancel" && contract.clientAction === "none") {
                       statusText = "Cancelación iniciada por proveedor (Esperando tu acción)";
                       statusColorClass = "text-red-600";
-                    } else {
+                    } else if (contract.clientAction === "dispute") {
+                      statusText = "En Disputa (Iniciada por ti)";
+                      statusColorClass = "text-orange-600";
+                    }
+                    else {
                       statusText = "Activo"; // Fallback for other active states
                       statusColorClass = "text-blue-600";
                     }
