@@ -283,14 +283,20 @@ const ProviderDashboard: React.FC = () => {
                   contract.status === "active" && 
                   contract.clientDeposited && 
                   contract.providerAction !== "finalize" && // Provider has not yet finalized
+                  contract.providerAction !== "cancel" && // Provider has not yet cancelled
                   contract.clientAction !== "cancel" && // Client has not cancelled
                   contract.clientAction !== "dispute"; // Client has not disputed
                 
-                // Provider can cancel if contract is pending or offered, or active (if not already cancelled/finalized/disputed by either)
+                // Provider can cancel if contract is not in a final state, and provider hasn't finalized/cancelled their side, and client hasn't finalized/disputed
                 const canProviderCancel = 
-                  (contract.status === "pending" && contract.providerAction === "none") ||
-                  (contract.status === "offered" && contract.clientAction === "none") || // Provider can cancel if client hasn't accepted yet
-                  (contract.status === "active" && contract.clientDeposited && contract.providerAction !== "cancel" && contract.clientAction !== "finalize" && contract.clientAction !== "dispute");
+                  contract.status !== "finalized" && 
+                  contract.status !== "cancelled" && 
+                  contract.status !== "disputed" && 
+                  contract.status !== "finalized_by_dispute" &&
+                  contract.providerAction !== "finalize" && 
+                  contract.providerAction !== "cancel" &&
+                  contract.clientAction !== "finalize" && 
+                  contract.clientAction !== "dispute";
 
                 let statusText = "";
                 let statusColorClass = "";
@@ -305,31 +311,27 @@ const ProviderDashboard: React.FC = () => {
                     statusColorClass = "text-purple-600";
                     break;
                   case "active":
-                    if (contract.clientDeposited) { // Funds are deposited
-                      if (contract.clientAction === "accept_offer" && contract.providerAction === "make_offer") {
-                        statusText = "Activo (Fondos depositados, puedes iniciar el servicio)";
-                        statusColorClass = "text-blue-600";
-                      } else if (contract.clientAction === "finalize" && contract.providerAction === "none") {
-                        statusText = "Activo (Cliente finalizó, esperando tu confirmación)";
-                        statusColorClass = "text-blue-600";
-                      } else if (contract.providerAction === "finalize" && contract.clientAction === "none") {
-                        statusText = "Activo (Esperando confirmación del cliente)";
-                        statusColorClass = "text-blue-600";
-                      } else if (contract.clientAction === "cancel" && contract.providerAction === "none") {
-                        statusText = "Cancelación iniciada por cliente (Esperando tu acción)";
-                        statusColorClass = "text-red-600";
-                      } else if (contract.providerAction === "cancel" && contract.clientAction === "none") {
-                        statusText = "Cancelación iniciada (Esperando cliente)";
-                        statusColorClass = "text-red-600";
-                      } else if (contract.clientAction === "dispute") {
-                        statusText = "En Disputa (Iniciada por cliente)";
-                        statusColorClass = "text-orange-600";
-                      } else {
-                        statusText = "Activo (En curso)"; // General active state
-                        statusColorClass = "text-blue-600";
-                      }
-                    } else { // Should not happen if status is 'active' but clientDeposited is false
-                      statusText = "Activo (Esperando depósito del cliente)";
+                    if (contract.clientDeposited && contract.clientAction === "finalize" && contract.providerAction === "none") {
+                      statusText = "Activo (Cliente finalizó, esperando tu confirmación)";
+                      statusColorClass = "text-blue-600";
+                    } else if (contract.clientDeposited && contract.clientAction === "accept_offer" && contract.providerAction === "none") {
+                      statusText = "Activo (Cliente aceptó, esperando tu acción)";
+                      statusColorClass = "text-blue-600";
+                    } else if (contract.providerAction === "finalize" && contract.clientAction !== "finalize" && contract.clientAction !== "cancel" && contract.clientAction !== "dispute") {
+                      statusText = "Activo (Esperando confirmación del cliente)";
+                      statusColorClass = "text-blue-600";
+                    } else if (contract.clientAction === "cancel" && contract.providerAction === "none") {
+                      statusText = "Cancelación iniciada por cliente (Esperando tu acción)";
+                      statusColorClass = "text-red-600";
+                    } else if (contract.providerAction === "cancel" && contract.clientAction === "none") {
+                      statusText = "Cancelación iniciada (Esperando cliente)";
+                      statusColorClass = "text-red-600";
+                    } else if (contract.clientAction === "dispute") {
+                      statusText = "En Disputa (Iniciada por cliente)";
+                      statusColorClass = "text-orange-600";
+                    }
+                    else {
+                      statusText = "Activo (En curso)"; // Fallback for other active states
                       statusColorClass = "text-blue-600";
                     }
                     break;

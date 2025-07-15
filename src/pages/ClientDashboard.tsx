@@ -90,8 +90,8 @@ const ClientDashboard: React.FC = () => {
       if (a.status !== "offered" && b.status === "offered") return 1;
 
       // 2. Then prioritize 'active' contracts where provider has finalized and client needs to finalize
-      const aIsReadyForClientFinalize = a.status === "active" && a.clientDeposited && a.providerAction === "finalize" && a.clientAction === "none";
-      const bIsReadyForClientFinalize = b.status === "active" && b.clientDeposited && b.providerAction === "finalize" && b.clientAction === "none";
+      const aIsReadyForClientFinalize = a.status === "active" && a.clientDeposited && a.providerAction === "finalize" && a.clientAction !== "finalize" && a.clientAction !== "cancel" && a.clientAction !== "dispute";
+      const bIsReadyForClientFinalize = b.status === "active" && b.clientDeposited && b.providerAction === "finalize" && b.clientAction !== "finalize" && b.clientAction !== "cancel" && b.clientAction !== "dispute";
 
       if (aIsReadyForClientFinalize && !bIsReadyForClientFinalize) return -1;
       if (!aIsReadyForClientFinalize && bIsReadyForClientFinalize) return 1;
@@ -270,7 +270,13 @@ const ClientDashboard: React.FC = () => {
                 const canClientAcceptOffer = contract.status === "offered" && contract.clientAction === "none";
 
                 // Client can finalize if contract is active, client has deposited, and provider has finalized
-                const canClientFinalize = contract.status === "active" && contract.clientDeposited && contract.providerAction === "finalize" && contract.clientAction === "none";
+                const canClientFinalize = 
+                  contract.status === "active" && 
+                  contract.clientDeposited && 
+                  contract.providerAction === "finalize" && 
+                  contract.clientAction !== "finalize" && // Client has not yet finalized
+                  contract.clientAction !== "cancel" && // Client has not yet cancelled
+                  contract.clientAction !== "dispute"; // Client has not yet disputed
                 
                 // Client can cancel if:
                 // 1. Contract is pending (before offer) and client hasn't acted
@@ -288,7 +294,9 @@ const ClientDashboard: React.FC = () => {
                 const canClientDispute = 
                   contract.status === "active" && 
                   contract.clientDeposited && 
-                  contract.clientAction === "none" &&
+                  contract.clientAction !== "finalize" && // Client has not yet finalized
+                  contract.clientAction !== "cancel" && // Client has not yet cancelled
+                  contract.clientAction !== "dispute" && // Client has not yet disputed
                   contract.providerAction !== "none" && // Only allow dispute if provider has acted
                   contract.status !== "finalized" &&
                   contract.status !== "cancelled" &&
@@ -314,7 +322,7 @@ const ClientDashboard: React.FC = () => {
                     } else if (contract.clientAction === "finalize" && contract.providerAction === "none") {
                       statusText = "Activo (Esperando confirmación del proveedor)";
                       statusColorClass = "text-blue-600";
-                    } else if (contract.providerAction === "finalize" && contract.clientAction === "none") {
+                    } else if (contract.providerAction === "finalize" && contract.clientAction !== "finalize" && contract.clientAction !== "cancel" && contract.clientAction !== "dispute") {
                       statusText = "Activo (Proveedor finalizó, esperando tu confirmación)";
                       statusColorClass = "text-blue-600";
                     } else if (contract.clientAction === "cancel" && contract.providerAction === "none") {
@@ -406,7 +414,7 @@ const ClientDashboard: React.FC = () => {
                         {/* Display message if client has acted or is waiting for provider to act first */}
                         {!canClientAcceptOffer && !canClientFinalize && !canClientCancel && !canClientDispute && contract.status !== "finalized" && contract.status !== "cancelled" && contract.status !== "disputed" && contract.status !== "finalized_by_dispute" && (
                           <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
-                            {contract.clientAction !== "none" ? "Esperando acción de la otra parte." : "Esperando acción del proveedor."}
+                            {contract.clientAction !== "none" && contract.clientAction !== "accept_offer" ? "Esperando acción de la otra parte." : "Esperando acción del proveedor."}
                           </p>
                         )}
                       </div>
