@@ -37,9 +37,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const storedUsers = localStorage.getItem("appUsers");
     const initialUsers = storedUsers ? JSON.parse(storedUsers) : [];
 
-    // Add default admin user if not already present
-    const adminExists = initialUsers.some((user: User) => user.email === "admin@admin.com");
-    if (!adminExists) {
+    // Add default admin user if not already present, AND ensure its type is 'admin'
+    let adminUserFound = false;
+    const updatedInitialUsers = initialUsers.map((user: User) => {
+      if (user.email === "admin@admin.com") {
+        adminUserFound = true;
+        // Ensure the type is 'admin' even if it was previously something else
+        if (user.type !== "admin") {
+          console.warn("Admin user found with incorrect type, correcting to 'admin'.");
+          return { ...user, type: "admin" };
+        }
+      }
+      return user;
+    });
+
+    if (!adminUserFound) {
       const adminUser: Admin = {
         id: "user-admin-1",
         name: "Admin",
@@ -49,9 +61,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         type: "admin",
         createdAt: Date.now(),
       };
-      initialUsers.push(adminUser);
+      updatedInitialUsers.push(adminUser);
     }
-    return initialUsers;
+    return updatedInitialUsers;
   });
 
   const [currentUser, setCurrentUser] = useState<User | null>(null);
