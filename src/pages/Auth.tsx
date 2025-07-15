@@ -81,8 +81,14 @@ const LoginForm: React.FC = () => {
       login(user);
       if (user.type === "client") {
         navigate("/client-dashboard");
-      } else {
+      } else if (user.type === "provider") { // Add explicit check for provider
         navigate("/provider-dashboard");
+      } else if (user.type === "admin") { // Add explicit check for admin
+        navigate("/admin-dashboard");
+      } else {
+        // Fallback or error for unknown user types, though our types are strict
+        showError("Tipo de usuario desconocido. Redirigiendo a la página principal.");
+        navigate("/");
       }
     } else {
       showError("Credenciales incorrectas.");
