@@ -22,25 +22,22 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import ClientProfileEditor from "@/components/ClientProfileEditor";
-import ProviderContactModal from "@/components/ProviderContactModal";
 import ContractCompletionModal from "@/components/ContractCompletionModal";
 import PaymentSimulationModal from "@/components/PaymentSimulationModal";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import ChatWindow from "@/components/ChatWindow"; // Import ChatWindow
+import { showError } from "@/utils/toast"; // Import showError
 
 const ClientDashboard: React.FC = () => {
   const { currentUser, getAllProviders } = useAuth();
-  const { getContractsForUser, handleContractAction, depositFunds, contracts } = useContracts();
+  const { getContractsForUser, handleContractAction, depositFunds, contracts, createContract } = useContracts();
   const client = currentUser as Client;
   const [isEditing, setIsEditing] = useState(false);
   const [searchTermProviders, setSearchTermProviders] = useState("");
   const [searchTermContracts, setSearchTermContracts] = useState("");
   const [displayedProviders, setDisplayedProviders] = useState<Provider[]>([]);
-  const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
-  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [isCompletionModalOpen, setIsCompletionModal] = useState(false);
   const [contractToFinalize, setContractToFinalize] = useState<Contract | null>(null);
-  // Removed isFeedbackModalOpen and feedbackData states
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [contractToPay, setContractToPay] = useState<Contract | null>(null);
   const [isContractChatModalOpen, setIsContractChatModalOpen] = useState(false); // New state for contract chat modal
@@ -117,33 +114,24 @@ const ClientDashboard: React.FC = () => {
     return filteredContracts.slice(0, 3);
   }, [clientContracts, searchTermContracts, allProviders, contracts]);
 
-  // Effect to open feedback modal if a contract just became finalized
-  // This useEffect is no longer needed as feedback is integrated into completion modal
-  // useEffect(() => {
-  //   console.log("ClientDashboard: useEffect for feedback modal triggered.");
-  //   console.log("ClientDashboard: contractToFinalize:", contractToFinalize);
-  //   console.log("ClientDashboard: isFeedbackModalOpen:", isFeedbackModalOpen);
+  const handleSolicitarServicio = (provider: Provider) => {
+    if (!currentUser || currentUser.type !== "client") {
+      showError("Debes iniciar sesión como cliente para solicitar un servicio.");
+      return;
+    }
+    
+    // Directly create contract in 'pending' status
+    const newContract = createContract(
+      currentUser.id,
+      provider.id,
+      provider.serviceTitle,
+      provider.rate || 0 // Pass the initial suggested rate
+    );
 
-  //   if (contractToFinalize && contractToFinalize.status === "finalized" && !isFeedbackModalOpen) {
-  //     console.log("ClientDashboard: Condition met to open feedback modal.");
-  //     const provider = allProviders.find(p => p.id === contractToFinalize.providerId);
-  //     if (provider) {
-  //       setFeedbackData({ contract: contractToFinalize, providerName: provider.name });
-  //       setIsFeedbackModalOpen(true);
-  //       setContractToFinalize(null); // Clear after opening feedback
-  //       console.log("ClientDashboard: Feedback modal opened and contractToFinalize cleared.");
-  //     } else {
-  //       console.log("ClientDashboard: Provider not found for contractToFinalize.");
-  //     }
-  //   } else {
-  //     console.log("ClientDashboard: Condition not met to open feedback modal.");
-  //   }
-  // }, [contracts, contractToFinalize, isFeedbackModalOpen, allProviders]);
-
-
-  const handleContactProvider = (provider: Provider) => {
-    setSelectedProvider(provider);
-    setIsContactModalOpen(true);
+    if (newContract) {
+      // createContract already shows a success toast.
+      // The contracts list in the dashboard should automatically update due to useContracts context.
+    }
   };
 
   const handleAcceptOfferClick = (contract: Contract) => {
@@ -156,9 +144,6 @@ const ClientDashboard: React.FC = () => {
       const depositSuccess = depositFunds(contractToPay.id);
       if (depositSuccess) {
         // The depositFunds function already updates the contract status to 'active' and shows success toast
-        // No need to navigate here, the dashboard will re-render
-      } else {
-        // showError("Error al depositar fondos. Inténtalo de nuevo."); // depositFunds already shows error
       }
       setContractToPay(null);
     }
@@ -524,7 +509,7 @@ const ClientDashboard: React.FC = () => {
                     <p className="mb-1 text-lg font-bold text-green-600 dark:text-green-400">
                       ${provider.rate.toFixed(2)} USD (Tarifa Sugerida)
                     </p>
-                    <Button className="mt-4 w-full" onClick={() => handleContactProvider(provider)}>Contactar</Button>
+                    <Button className="mt-4 w-full" onClick={() => handleSolicitarServicio(provider)}>Solicitar Servicio</Button>
                   </CardContent>
                 </Card>
               ))}
@@ -532,13 +517,6 @@ const ClientDashboard: React.FC = () => {
           )}
         </div>
       </div>
-      {selectedProvider && (
-        <ProviderContactModal
-          provider={selectedProvider}
-          isOpen={isContactModalOpen}
-          onClose={() => setIsContactModalOpen(false)}
-        />
-      )}
       {isCompletionModalOpen && contractToFinalize && (
         <ContractCompletionModal
           isOpen={isCompletionModalOpen}
@@ -551,7 +529,6 @@ const ClientDashboard: React.FC = () => {
           providerName={allProviders.find(p => p.id === contractToFinalize.providerId)?.name || "Desconocido"}
         />
       )}
-      {/* Removed FeedbackModal */}
       {isPaymentModalOpen && contractToPay && (
         <PaymentSimulationModal
           isOpen={isPaymentModalOpen}
