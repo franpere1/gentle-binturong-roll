@@ -12,13 +12,18 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input"; // Import Input
+import { Input } from "@/components/ui/input";
 import { showError, showSuccess } from "@/utils/toast";
+
+const INITIAL_DISPLAY_LIMIT = 4;
+const LOAD_MORE_AMOUNT = 10;
 
 const AdminDashboard: React.FC = () => {
   const { currentUser, findUserById } = useAuth();
   const { contracts, resolveDispute } = useContracts();
   const [searchTermDisputes, setSearchTermDisputes] = useState("");
+  const [activeDisputesLimit, setActiveDisputesLimit] = useState(INITIAL_DISPLAY_LIMIT);
+  const [resolvedDisputesLimit, setResolvedDisputesLimit] = useState(INITIAL_DISPLAY_LIMIT);
 
   // Combined list of all relevant contracts (disputed and finalized_by_dispute)
   const allRelevantContracts = useMemo(() => {
@@ -32,17 +37,34 @@ const AdminDashboard: React.FC = () => {
   }, [contracts, searchTermDisputes, findUserById]);
 
   // Separate and sort for display
-  const displayedDisputedContracts = useMemo(() => {
+  const sortedDisputedContracts = useMemo(() => {
     let filtered = allRelevantContracts.filter(contract => contract.status === "disputed");
     filtered.sort((a, b) => b.createdAt - a.createdAt); // Sort by creation date (most recent first)
-    return searchTermDisputes ? filtered : filtered.slice(0, 4); // Limit to 4 if no search term
-  }, [allRelevantContracts, searchTermDisputes]);
+    return filtered;
+  }, [allRelevantContracts]);
 
-  const displayedResolvedDisputes = useMemo(() => {
+  const sortedResolvedDisputes = useMemo(() => {
     let filtered = allRelevantContracts.filter(contract => contract.status === "finalized_by_dispute");
     filtered.sort((a, b) => b.updatedAt - a.updatedAt); // Sort by most recently updated
-    return searchTermDisputes ? filtered : filtered.slice(0, 4); // Limit to 4 if no search term
-  }, [allRelevantContracts, searchTermDisputes]);
+    return filtered;
+  }, [allRelevantContracts]);
+
+  // Apply limits for display
+  const displayedDisputedContracts = useMemo(() => {
+    return searchTermDisputes ? sortedDisputedContracts : sortedDisputedContracts.slice(0, activeDisputesLimit);
+  }, [sortedDisputedContracts, searchTermDisputes, activeDisputesLimit]);
+
+  const displayedResolvedDisputes = useMemo(() => {
+    return searchTermDisputes ? sortedResolvedDisputes : sortedResolvedDisputes.slice(0, resolvedDisputesLimit);
+  }, [sortedResolvedDisputes, searchTermDisputes, resolvedDisputesLimit]);
+
+  const handleLoadMoreActiveDisputes = () => {
+    setActiveDisputesLimit(prevLimit => prevLimit + LOAD_MORE_AMOUNT);
+  };
+
+  const handleLoadMoreResolvedDisputes = () => {
+    setResolvedDisputesLimit(prevLimit => prevLimit + LOAD_MORE_AMOUNT);
+  };
 
   const handleResolveToProvider = (contract: Contract) => {
     if (currentUser?.type === "admin") {
@@ -161,6 +183,13 @@ const AdminDashboard: React.FC = () => {
               })}
             </div>
           )}
+          {!searchTermDisputes && displayedDisputedContracts.length < sortedDisputedContracts.length && (
+            <div className="text-center mt-6">
+              <Button onClick={handleLoadMoreActiveDisputes} variant="outline">
+                Cargar más disputas activas ({sortedDisputedContracts.length - displayedDisputedContracts.length} restantes)
+              </Button>
+            </div>
+          )}
 
           <h2 className="text-2xl font-bold mt-8 mb-4 text-center">Historial de Disputas Resueltas</h2>
           {displayedResolvedDisputes.length === 0 && searchTermDisputes !== "" ? (
@@ -210,6 +239,13 @@ const AdminDashboard: React.FC = () => {
                   </Card>
                 );
               })}
+            </div>
+          )}
+          {!searchTermDisputes && displayedResolvedDisputes.length < sortedResolvedDisputes.length && (
+            <div className="text-center mt-6">
+              <Button onClick={handleLoadMoreResolvedDisputes} variant="outline">
+                Cargar más disputas resueltas ({sortedResolvedDisputes.length - displayedResolvedDisputes.length} restantes)
+              </Button>
             </div>
           )}
         </div>
