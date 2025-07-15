@@ -50,7 +50,8 @@ const AdminDashboard: React.FC = () => {
   // Filter for resolved disputes
   const resolvedDisputes = useMemo(() => {
     return contracts.filter(contract => contract.status === "finalized_by_dispute")
-      .sort((a, b) => b.updatedAt - a.updatedAt); // Sort by most recently updated
+      .sort((a, b) => b.updatedAt - a.updatedAt) // Sort by most recently updated
+      .slice(0, 3); // Take only the last 3
   }, [contracts]);
 
   const handleResolveToProvider = (contract: Contract) => {
