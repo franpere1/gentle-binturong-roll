@@ -288,13 +288,11 @@ const ProviderDashboard: React.FC = () => {
                   contract.clientAction !== "dispute"; // Client has not disputed
                 
                 // Provider can cancel if:
-                // 1. Contract is pending (before offer) and provider hasn't acted
-                // 2. Contract is offered (after offer) and provider hasn't acted
-                // 3. Contract is active, client has deposited, and provider hasn't finalized or disputed
+                // Contract is active, client has deposited, and provider hasn't finalized or disputed
                 const canProviderCancel = 
-                  (contract.status === "pending" && contract.providerAction === "none") ||
-                  (contract.status === "offered" && contract.providerAction === "none") ||
-                  (contract.status === "active" && contract.clientDeposited && contract.providerAction === "none" && contract.clientAction !== "dispute" && contract.clientAction !== "finalize");
+                  (contract.status === "pending" && contract.providerAction === "none") || // Pending, no action yet
+                  (contract.status === "offered" && contract.providerAction === "make_offer" && contract.clientAction === "none") || // Offered, provider made offer, client hasn't accepted/cancelled
+                  (contract.status === "active" && contract.clientDeposited && contract.providerAction !== "finalize" && contract.providerAction !== "cancel" && contract.clientAction !== "dispute" && contract.clientAction !== "finalize");
 
 
                 let statusText = "";
