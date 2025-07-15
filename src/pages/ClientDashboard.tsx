@@ -25,7 +25,7 @@ import ClientProfileEditor from "@/components/ClientProfileEditor";
 import ProviderContactModal from "@/components/ProviderContactModal";
 import ContractCompletionModal from "@/components/ContractCompletionModal";
 import FeedbackModal from "@/components/FeedbackModal";
-import PaymentSimulationModal from "@/components/PaymentSimulationModal"; // Ensure this is imported
+import PaymentSimulationModal from "@/components/PaymentSimulationModal";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const ClientDashboard: React.FC = () => {
@@ -42,8 +42,8 @@ const ClientDashboard: React.FC = () => {
   const [contractToFinalize, setContractToFinalize] = useState<Contract | null>(null);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const [feedbackData, setFeedbackData] = useState<{ contract: Contract; providerName: string } | null>(null);
-  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false); // State for payment modal
-  const [contractToPay, setContractToPay] = useState<Contract | null>(null); // State to hold contract for payment
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [contractToPay, setContractToPay] = useState<Contract | null>(null);
 
   const allProviders = getAllProviders();
   const clientContracts = client ? getContractsForUser(client.id) : [];
@@ -155,7 +155,7 @@ const ClientDashboard: React.FC = () => {
         // The depositFunds function already updates the contract status to 'active' and shows success toast
         // No need to navigate here, the dashboard will re-render
       } else {
-        showError("Error al depositar fondos. Inténtalo de nuevo.");
+        // showError("Error al depositar fondos. Inténtalo de nuevo."); // depositFunds already shows error
       }
       setContractToPay(null);
     }
@@ -288,20 +288,13 @@ const ClientDashboard: React.FC = () => {
                   (contract.status === "active" && contract.clientDeposited && contract.providerAction === "cancel" && contract.clientAction === "none");
 
                 // Client can dispute if:
-                // Contract is active (funds deposited), and client hasn't taken any action (finalize/cancel/dispute)
-                // AND the provider HAS taken a conflicting action (finalize or cancel)
-                // and the contract is not already finalized, cancelled, or disputed.
+                // Contract is active (funds deposited), and client hasn't taken a final action (finalize/cancel/dispute)
                 const canClientDispute = 
                   contract.status === "active" && 
                   contract.clientDeposited && 
                   contract.clientAction !== "finalize" && 
                   contract.clientAction !== "cancel" && 
-                  contract.clientAction !== "dispute" && 
-                  (contract.providerAction === "finalize" || contract.providerAction === "cancel") && // Only allow dispute if provider has finalized or cancelled
-                  contract.status !== "finalized" &&
-                  contract.status !== "cancelled" &&
-                  contract.status !== "disputed" &&
-                  contract.status !== "finalized_by_dispute";
+                  contract.clientAction !== "dispute";
 
                 let statusText = "";
                 let statusColorClass = "";
@@ -529,7 +522,7 @@ const ClientDashboard: React.FC = () => {
           isOpen={isPaymentModalOpen}
           onClose={() => setIsPaymentModalOpen(false)}
           serviceTitle={contractToPay.serviceTitle}
-          initialAmount={contractToPay.serviceRate} // Use the offered rate
+          initialAmount={contractToPay.serviceRate}
           onConfirm={handlePaymentConfirmed}
         />
       )}
