@@ -224,9 +224,6 @@ const ProviderRegistrationForm: React.FC = () => {
     "Abogado",
     "Adiestrador canino",
     "Albañil",
-    "Servicios de sistemas",
-    "Servicios digitales",
-    "Servicios electrónica",
     "Arquitecto",
     "Barbero",
     "Carpintero",
@@ -261,6 +258,9 @@ const ProviderRegistrationForm: React.FC = () => {
     "Pintor",
     "Plomero",
     "Repostero",
+    "Servicios de sistemas",
+    "Servicios digitales",
+    "Servicios electrónica",
     "Técnico de aire acondicionado",
   ];
 

@@ -2,9 +2,6 @@ export type ServiceCategory =
   | "Abogado"
   | "Adiestrador canino"
   | "Albañil"
-  | "Servicios de sistemas"
-  | "Servicios digitales"
-  | "Servicios electrónica"
   | "Arquitecto"
   | "Barbero"
   | "Carpintero"
@@ -39,6 +36,9 @@ export type ServiceCategory =
   | "Pintor"
   | "Plomero"
   | "Repostero"
+  | "Servicios de sistemas"
+  | "Servicios digitales"
+  | "Servicios electrónica"
   | "Técnico de aire acondicionado";
 
 export interface User {

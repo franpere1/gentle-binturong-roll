@@ -49,9 +49,6 @@ const ProviderProfileEditor: React.FC<ProviderProfileEditorProps> = ({
     "Abogado",
     "Adiestrador canino",
     "Albañil",
-    "Servicios de sistemas",
-    "Servicios digitales",
-    "Servicios electrónica",
     "Arquitecto",
     "Barbero",
     "Carpintero",
@@ -86,6 +83,9 @@ const ProviderProfileEditor: React.FC<ProviderProfileEditorProps> = ({
     "Pintor",
     "Plomero",
     "Repostero",
+    "Servicios de sistemas",
+    "Servicios digitales",
+    "Servicios electrónica",
     "Técnico de aire acondicionado",
   ];
 
