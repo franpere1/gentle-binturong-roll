@@ -38,8 +38,8 @@ const ContractCompletionModal: React.FC<ContractCompletionModalProps> = ({
       showError("Por favor, selecciona una calificación para el servicio.");
       return;
     }
-    if (comment.trim().length > 30) {
-      showError("El comentario no debe exceder los 30 caracteres.");
+    if (comment.trim().length > 2000) { // Updated validation to 2000 characters
+      showError("El comentario no debe exceder los 2000 caracteres.");
       return;
     }
     if (comment.trim() === "") {
@@ -117,13 +117,13 @@ const ContractCompletionModal: React.FC<ContractCompletionModalProps> = ({
               </RadioGroup>
             </div>
             <div className="mt-4">
-              <Label htmlFor="feedback-comment" className="mb-2 block">Comentario (máx. 30 caracteres):</Label>
+              <Label htmlFor="feedback-comment" className="mb-2 block">Comentario (máx. 2000 caracteres):</Label>
               <Textarea
                 id="feedback-comment"
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
-                maxLength={30}
-                placeholder="Escribe tu comentario aquí (máx. 30 caracteres)..."
+                maxLength={2000} // Updated maxLength to 2000
+                placeholder="Escribe tu comentario aquí (máx. 2000 caracteres)..."
               />
             </div>
           </div>
