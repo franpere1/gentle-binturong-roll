@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useChat } from "@/context/ChatContext";
 import { useAuth } from "@/context/AuthContext";
-import { Message, User, Contract } from "@/types"; // Import Contract type
+import { Message, User, Contract } from "@/types";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { showError } from "@/utils/toast"; // Importar showError
+import { showError } from "@/utils/toast";
 
 interface ChatWindowProps {
-  otherUser: User; // El otro usuario con el que se está chateando (proveedor o cliente)
-  contractStatus?: Contract['status'] | 'initial_contact'; // New prop for contract status or initial contact
+  otherUser: User;
+  contractStatus?: Contract['status'] | 'initial_contact';
 }
 
 const ChatWindow: React.FC<ChatWindowProps> = ({ otherUser, contractStatus }) => {
@@ -23,8 +23,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ otherUser, contractStatus }) =>
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (messageInput.trim() && currentUser) {
-      let messageToSend = messageInput.trim();
-      let masked = false;
+      let messageContent = messageInput.trim();
+      let containsSensitiveInfo = false;
 
       // Determine if it's a pre-payment chat (pending, offered, or initial contact)
       const isPrePaymentChat = contractStatus === "pending" || contractStatus === "offered" || contractStatus === "initial_contact";
@@ -32,29 +32,20 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ otherUser, contractStatus }) =>
       if (isPrePaymentChat) {
         // Rule 1: Mask email local part (before @)
         const emailLocalPartRegex = /\b[A-Za-z0-9._%+-]+(@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,})\b/g;
-        if (emailLocalPartRegex.test(messageToSend)) {
-          messageToSend = messageToSend.replace(emailLocalPartRegex, (match, domainPart) => {
-            masked = true;
-            return '*'.repeat(match.length - domainPart.length) + domainPart;
-          });
+        if (emailLocalPartRegex.test(messageContent)) {
+          containsSensitiveInfo = true;
         }
 
         // Rule 2: Mask social media handles (@username)
         const socialHandleRegex = /(^|\s)@([a-zA-Z0-9_.]+)\b/g;
-        if (socialHandleRegex.test(messageToSend)) {
-          messageToSend = messageToSend.replace(socialHandleRegex, (match, p1, p2) => {
-            masked = true;
-            return `${p1}@[OCULTO]`;
-          });
+        if (socialHandleRegex.test(messageContent)) {
+          containsSensitiveInfo = true;
         }
 
         // Rule 3: Mask phone numbers (7 or more consecutive digits)
         const phoneNumbersRegex = /\b\d{7,}\b/g;
-        if (phoneNumbersRegex.test(messageToSend)) {
-          messageToSend = messageToSend.replace(phoneNumbersRegex, (match) => {
-            masked = true;
-            return '*'.repeat(match.length);
-          });
+        if (phoneNumbersRegex.test(messageContent)) {
+          containsSensitiveInfo = true;
         }
 
         // Rule 4: Two consecutive words that indicate numbers
@@ -67,48 +58,45 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ otherUser, contractStatus }) =>
         const numberWordsPattern = numberWords.join("|");
         const twoNumberWordsRegex = new RegExp(`\\b(${numberWordsPattern})\\s+(${numberWordsPattern})\\b`, 'gi');
 
-        if (twoNumberWordsRegex.test(messageToSend)) {
-          messageToSend = messageToSend.replace(twoNumberWordsRegex, (match) => {
-            masked = true;
-            return '*'.repeat(match.length); // Replace with asterisks of same length
-          });
+        if (twoNumberWordsRegex.test(messageContent)) {
+          containsSensitiveInfo = true;
         }
 
         // Rule 5: Mask URLs/Links
         const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+|[a-zA-Z0-9-]+\.(com|org|net|ve|co|es)[^\s]*)/g;
-        if (urlRegex.test(messageToSend)) {
-          messageToSend = messageToSend.replace(urlRegex, () => {
-            masked = true;
-            return '[LINK OCULTO]';
-          });
+        if (urlRegex.test(messageContent)) {
+          containsSensitiveInfo = true;
         }
 
         // Rule 6: Mask specific keywords related to social media and contact info
         const sensitiveKeywords = [
           "instagram", "tiktok", "email", "telefono", "whatsapp", "facebook", "twitter",
           "telegram", "discord", "linkedin", "gmail", "hotmail", "outlook", "yahoo",
-          "contacto", "celular", "movil", "número", "numero"
+          "contacto", "celular", "movil", "número", "numero", "llámame", "escríbeme", "mi número", "mi correo",
+          "encuéntrame", "fuera de la app", "directo", "personal", "whatsappme", "telegramme", "discordme",
+          "skype", "zoom", "google meet", "dirección", "ubicación", "cita", "reunión", "visita", "domicilio",
+          "casa", "oficina", "local", "calle", "avenida", "zona", "sector", "punto de referencia",
+          "coordenadas", "gps", "mapa", "encuentro", "vernos", "hablamos", "contactar", "comunicar", "reunirse"
         ];
         const keywordRegex = new RegExp(`\\b(${sensitiveKeywords.join("|")})\\b`, 'gi');
-        if (keywordRegex.test(messageToSend)) {
-          messageToSend = messageToSend.replace(keywordRegex, () => {
-            masked = true;
-            return '[OCULTO]';
-          });
+        if (keywordRegex.test(messageContent)) {
+          containsSensitiveInfo = true;
+        }
+
+        if (containsSensitiveInfo) {
+          showError("Tu mensaje contiene información sensible (contactos, números, enlaces o intentos de comunicación externa) y no puede ser enviado antes de que el contrato esté activo. Por favor, mantén la conversación dentro de la plataforma.");
+          setMessageInput(""); // Clear the input field
+          return; // Prevent sending the message
         }
       }
 
-      sendMessage(otherUser.id, messageToSend);
+      // If not a pre-payment chat or no sensitive info detected, send the message
+      sendMessage(otherUser.id, messageContent);
       setMessageInput("");
-
-      if (masked) {
-        showError("Se detectó información sensible (contactos, números o enlaces) y fue ocultada para proteger tu privacidad y la de otros usuarios antes de que se realice el pago.");
-      }
     }
   };
 
   useEffect(() => {
-    // Desplazarse al final de los mensajes cuando se actualizan
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [conversationMessages]);
 
