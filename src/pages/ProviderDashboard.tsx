@@ -305,8 +305,8 @@ const ProviderDashboard: React.FC = () => {
                   (contract.status === "offered" && contract.providerAction === "make_offer" && contract.clientAction === "none") || // Offered, provider made offer, client hasn't accepted/cancelled
                   (contract.status === "active" && contract.clientDeposited && contract.providerAction !== "finalize" && contract.providerAction !== "cancel" && contract.clientAction !== "dispute" && contract.clientAction !== "finalize");
 
-                // Provider can chat if contract is active and client has deposited
-                const canProviderChat = contract.status === "active" && contract.clientDeposited;
+                // Provider can chat if contract is active or disputed and client has deposited
+                const canProviderChat = (contract.status === "active" || contract.status === "disputed") && contract.clientDeposited;
 
                 let statusText = "";
                 let statusColorClass = "";
@@ -362,7 +362,7 @@ const ProviderDashboard: React.FC = () => {
                     statusColorClass = "text-red-600";
                     break;
                   case "disputed":
-                    statusText = "En Disputa (Fondos Retenidos)";
+                    statusText = "En Disputa (Esperando resolución)";
                     statusColorClass = "text-orange-600";
                     break;
                   case "finalized_by_dispute":

@@ -184,6 +184,12 @@ const ClientDashboard: React.FC = () => {
     }
   };
 
+  const handleCancelDispute = (contractId: string) => {
+    if (currentUser) {
+      handleContractAction(contractId, currentUser.id, 'cancel_dispute');
+    }
+  };
+
   const handleChatWithProvider = (providerId: string) => {
     const provider = allProviders.find(p => p.id === providerId);
     if (provider) {
@@ -307,6 +313,9 @@ const ClientDashboard: React.FC = () => {
                   contract.clientAction !== "cancel" && 
                   contract.clientAction !== "dispute";
 
+                // Client can cancel dispute if contract is disputed and client initiated it
+                const canClientCancelDispute = contract.status === "disputed" && contract.clientAction === "dispute";
+
                 // Check if client has just accepted offer and is waiting for provider's first action
                 const isWaitingForProviderAction = 
                   contract.status === "active" && 
@@ -314,8 +323,8 @@ const ClientDashboard: React.FC = () => {
                   contract.clientAction === "accept_offer" && 
                   contract.providerAction === "make_offer";
 
-                // Client can chat if contract is active and client has deposited
-                const canClientChat = contract.status === "active" && contract.clientDeposited;
+                // Client can chat if contract is active or disputed and client has deposited
+                const canClientChat = (contract.status === "active" || contract.status === "disputed") && contract.clientDeposited;
 
                 let statusText = "";
                 let statusColorClass = "";
@@ -370,7 +379,7 @@ const ClientDashboard: React.FC = () => {
                     statusColorClass = "text-red-600";
                     break;
                   case "disputed":
-                    statusText = "En Disputa (Fondos Retenidos)";
+                    statusText = "En Disputa (Esperando resolución)";
                     statusColorClass = "text-orange-600";
                     break;
                   case "finalized_by_dispute":
@@ -433,13 +442,18 @@ const ClientDashboard: React.FC = () => {
                             Disputar
                           </Button>
                         )}
+                        {canClientCancelDispute && (
+                          <Button variant="outline" className="w-full bg-yellow-500 hover:bg-yellow-600 text-white" onClick={() => handleCancelDispute(contract.id)}>
+                            Cancelar Disputa
+                          </Button>
+                        )}
                         {canClientChat && provider && (
                           <Button className="w-full" onClick={() => handleChatWithProvider(provider.id)}>
                             Chatear
                           </Button>
                         )}
                         {/* Display message if client has acted or is waiting for provider to act first */}
-                        {!canClientAcceptOffer && !canClientFinalize && !canClientCancel && !canClientDispute && contract.status !== "finalized" && contract.status !== "cancelled" && contract.status !== "disputed" && contract.status !== "finalized_by_dispute" && (
+                        {!canClientAcceptOffer && !canClientFinalize && !canClientCancel && !canClientDispute && !canClientCancelDispute && contract.status !== "finalized" && contract.status !== "cancelled" && contract.status !== "disputed" && contract.status !== "finalized_by_dispute" && (
                           <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
                             {isWaitingForProviderAction ? "Esperando acción del proveedor." : "Esperando acción de la otra parte."}
                           </p>

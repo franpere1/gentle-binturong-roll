@@ -14,7 +14,7 @@ interface ContractContextType {
   ) => Contract | null;
   makeOffer: (contractId: string, newRate: number) => void;
   depositFunds: (contractId: string) => boolean;
-  handleContractAction: (contractId: string, actorId: string, actionType: 'finalize' | 'cancel' | 'dispute') => void;
+  handleContractAction: (contractId: string, actorId: string, actionType: 'finalize' | 'cancel' | 'dispute' | 'cancel_dispute') => void;
   resolveDispute: (contractId: string, resolutionType: 'toClient' | 'toProvider') => void;
   getContractsForUser: (userId: string) => Contract[];
   hasActiveOrPendingContract: (clientId: string, providerId: string) => boolean;
@@ -144,7 +144,7 @@ export const ContractProvider: React.FC<ContractProviderProps> = ({ children }) 
     return success;
   };
 
-  const handleContractAction = (contractId: string, actorId: string, actionType: 'finalize' | 'cancel' | 'dispute') => {
+  const handleContractAction = (contractId: string, actorId: string, actionType: 'finalize' | 'cancel' | 'dispute' | 'cancel_dispute') => {
     console.log(`ContractContext: handleContractAction called for contract ${contractId} by actor ${actorId} with action ${actionType}`);
     setContracts((prevContracts) => {
       return prevContracts.map((contract) => {
@@ -182,9 +182,33 @@ export const ContractProvider: React.FC<ContractProviderProps> = ({ children }) 
         }
         // --- End immediate cancellation handling ---
 
+        // --- Handle cancel dispute action (only client can initiate) ---
+        if (actionType === 'cancel_dispute') {
+          if (actorId === contract.clientId) {
+            if (updatedContract.status === "disputed" && updatedContract.clientAction === "dispute") {
+              updatedContract.status = "active"; // Revert to active
+              updatedContract.clientAction = "accept_offer"; // Revert client action to accepted offer
+              // providerAction remains as it was (e.g., 'make_offer' or 'finalize')
+              showSuccess(`Disputa para el contrato "${updatedContract.serviceTitle}" cancelada. Puedes proceder a finalizar el contrato.`);
+              // DO NOT clear chat messages here, contract is still active
+              console.log("ContractContext: Dispute cancelled by client, reverted to active.");
+              return updatedContract;
+            } else {
+              showError("No se puede cancelar la disputa en el estado actual del contrato.");
+              console.log("ContractContext: Client tried to cancel dispute in invalid state, returning original.");
+              return contract;
+            }
+          } else if (actorId === contract.providerId) {
+            showError("Solo el cliente puede cancelar una disputa.");
+            console.log("ContractContext: Provider tried to cancel dispute, denied.");
+            return contract;
+          }
+        }
+
         // If contract is already in a final state (excluding the immediate cancellation above)
-        if (updatedContract.status === "finalized" || updatedContract.status === "cancelled" || updatedContract.status === "disputed" || updatedContract.status === "finalized_by_dispute") {
-          showError("Este contrato ya ha sido finalizado, cancelado o está en disputa.");
+        if (updatedContract.status === "finalized" || updatedContract.status === "cancelled" || updatedContract.status === "finalized_by_dispute") {
+          // Note: 'disputed' is now handled by 'cancel_dispute' or dispute initiation, so it's not a final state here.
+          showError("Este contrato ya ha sido finalizado o cancelado.");
           console.log("ContractContext: Contract already in final state, returning original.");
           return contract;
         }
@@ -204,7 +228,7 @@ export const ContractProvider: React.FC<ContractProviderProps> = ({ children }) 
               updatedContract.clientAction = "dispute";
               updatedContract.status = "disputed";
               showSuccess(`Disputa iniciada para el contrato "${updatedContract.serviceTitle}". Los fondos permanecen retenidos hasta la resolución.`);
-              clearConversationMessages(updatedContract.clientId, updatedContract.providerId);
+              // REMOVED: clearConversationMessages(updatedContract.clientId, updatedContract.providerId); // Chat should remain active during dispute
               console.log("ContractContext: Dispute initiated by client.");
               return updatedContract;
             } else {
@@ -317,7 +341,7 @@ export const ContractProvider: React.FC<ContractProviderProps> = ({ children }) 
             message = `Disputa resuelta para "${contract.serviceTitle}". Fondos (${amountToProvider.toFixed(2)} USD) liberados al proveedor (menos comisión).`;
           }
           showSuccess(message);
-          clearConversationMessages(contract.clientId, contract.providerId);
+          clearConversationMessages(contract.clientId, contract.providerId); // Clear chat after dispute resolution
           console.log("ContractContext: Dispute resolved.");
           return { ...contract, status: "finalized_by_dispute", disputeResolution: resolutionType, updatedAt: Date.now() };
         }
