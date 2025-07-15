@@ -271,7 +271,28 @@ export const ContractProvider: React.FC<ContractProviderProps> = ({ children }) 
           updatedContract.status = "disputed";
           showError(`Conflicto en el contrato "${updatedContract.serviceTitle}". Se ha iniciado una disputa. Un administrador revisará el caso.`);
           console.log("ContractContext: Conflict detected, contract disputed.");
-        } else {
+        } else if (
+          // New condition: Provider cancels an active contract where client has deposited
+          actorId === contract.providerId && actionType === 'cancel' &&
+          updatedContract.status === "active" && clientDeposited &&
+          clientAction !== "finalize" && clientAction !== "dispute" // Client hasn't finalized or disputed yet
+        ) {
+          updatedContract.status = "cancelled";
+          showSuccess(`Contrato "${updatedContract.serviceTitle}" cancelado por el proveedor. Fondos reembolsados al cliente.`);
+          clearConversationMessages(updatedContract.clientId, updatedContract.providerId);
+          console.log("ContractContext: Active contract cancelled by provider, funds returned to client.");
+        } else if (
+          // New condition: Client cancels an active contract where provider has not finalized
+          actorId === contract.clientId && actionType === 'cancel' &&
+          updatedContract.status === "active" && clientDeposited &&
+          providerAction !== "finalize" && providerAction !== "dispute" // Provider hasn't finalized or disputed yet
+        ) {
+          updatedContract.status = "cancelled";
+          showSuccess(`Contrato "${updatedContract.serviceTitle}" cancelado por el cliente. Fondos reembolsados al cliente.`);
+          clearConversationMessages(updatedContract.clientId, updatedContract.providerId);
+          console.log("ContractContext: Active contract cancelled by client, funds returned to client.");
+        }
+        else {
           if (updatedContract.status === "active") {
             showSuccess(`Tu acción de ${actionType === 'finalize' ? 'finalizar' : 'cancelar'} el contrato "${updatedContract.serviceTitle}" ha sido registrada. Esperando la acción de la otra parte.`);
             console.log("ContractContext: Action recorded, waiting for other party.");

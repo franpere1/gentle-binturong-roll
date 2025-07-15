@@ -77,7 +77,7 @@ const ProviderDashboard: React.FC = () => {
 
       // 5. Then prioritize 'active' contracts where no one has acted yet (after client deposit)
       const aIsPurelyActive = a.status === "active" && a.clientDeposited && a.clientAction === "accept_offer" && a.providerAction === "none";
-      const bIsPurelyActive = b.status === "active" && b.clientDeposited && b.clientAction === "accept_offer" && b.providerAction === "none";
+      const bIsPurelyActive = b.status === "active" && b.clientDeposited && a.clientAction === "accept_offer" && b.providerAction === "none";
 
       if (aIsPurelyActive && !bIsPurelyActive) return -1;
       if (!aIsPurelyActive && bIsPurelyActive) return 1;
@@ -290,11 +290,11 @@ const ProviderDashboard: React.FC = () => {
                 // Provider can cancel if:
                 // 1. Contract is pending (before offer) and provider hasn't acted
                 // 2. Contract is offered (after offer) and provider hasn't acted
-                // 3. Contract is active AND client has initiated cancellation AND provider hasn't acted
+                // 3. Contract is active, client has deposited, and provider hasn't finalized or disputed
                 const canProviderCancel = 
                   (contract.status === "pending" && contract.providerAction === "none") ||
                   (contract.status === "offered" && contract.providerAction === "none") ||
-                  (contract.status === "active" && contract.clientDeposited && contract.clientAction === "cancel" && contract.providerAction === "none");
+                  (contract.status === "active" && contract.clientDeposited && contract.providerAction === "none" && contract.clientAction !== "dispute" && contract.clientAction !== "finalize");
 
 
                 let statusText = "";
