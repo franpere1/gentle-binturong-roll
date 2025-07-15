@@ -5,6 +5,7 @@ import { Message, User } from "@/types";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { showError } from "@/utils/toast"; // Importar showError
 
 interface ChatWindowProps {
   otherUser: User; // El otro usuario con el que se está chateando (proveedor o cliente)
@@ -21,8 +22,25 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ otherUser }) => {
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (messageInput.trim() && currentUser) {
-      sendMessage(otherUser.id, messageInput.trim());
+      let messageToSend = messageInput.trim();
+      let numbersMasked = false;
+
+      // Expresión regular para encontrar secuencias de 6 o más dígitos consecutivos
+      const consecutiveNumbersRegex = /\d{6,}/g;
+
+      if (consecutiveNumbersRegex.test(messageToSend)) {
+        messageToSend = messageToSend.replace(consecutiveNumbersRegex, (match) => {
+          numbersMasked = true;
+          return '*'.repeat(match.length); // Reemplazar con asteriscos de la misma longitud
+        });
+      }
+
+      sendMessage(otherUser.id, messageToSend);
       setMessageInput("");
+
+      if (numbersMasked) {
+        showError("Se detectaron números consecutivos largos y fueron ocultados para proteger tu privacidad y la de otros usuarios.");
+      }
     }
   };
 
