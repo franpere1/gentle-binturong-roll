@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import Header from "@/components/Header";
 import { MadeWithDyad } from "@/components/made-with-dyad";
 import { useAuth } from "@/context/AuthContext";
@@ -20,18 +20,18 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input"; // Import Input for search bar
+import { Input } from "@/components/ui/input";
 import ProviderProfileEditor from "@/components/ProviderProfileEditor";
 import { Star } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"; // Import Avatar components
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const ProviderDashboard: React.FC = () => {
-  const { currentUser, findUserById } = useAuth(); // Usar findUserById
-  const { getContractsForUser, finalizeContractByProvider } = useContracts();
+  const { currentUser, findUserById } = useAuth();
+  const { getContractsForUser, handleContractAction, contracts } = useContracts(); // Añadir contracts del contexto
   const provider = currentUser as Provider;
   const [isEditing, setIsEditing] = useState(false);
-  const [searchTermContracts, setSearchTermContracts] = useState(""); // Nuevo estado para la búsqueda de contratos
+  const [searchTermContracts, setSearchTermContracts] = useState("");
 
   const providerContracts = provider ? getContractsForUser(provider.id) : [];
 
@@ -39,7 +39,7 @@ const ProviderDashboard: React.FC = () => {
   const displayedContracts = useMemo(() => {
     const lowerCaseSearchTerm = searchTermContracts.toLowerCase();
     let filteredContracts = providerContracts.filter(contract => {
-      const client = findUserById(contract.clientId); // Usar findUserById
+      const client = findUserById(contract.clientId);
       const clientName = client ? client.name.toLowerCase() : "";
       return (
         contract.serviceTitle.toLowerCase().includes(lowerCaseSearchTerm) ||
@@ -49,12 +49,30 @@ const ProviderDashboard: React.FC = () => {
 
     // Sort: active contracts first, then by creation date (most recent)
     filteredContracts.sort((a, b) => {
-      // Active contracts (clientDeposited && providerFinalized) come first
-      const aIsActive = a.status === "active" && a.clientDeposited && !a.providerFinalized; // For provider, active means client deposited but provider hasn't finalized
-      const bIsActive = b.status === "active" && b.clientDeposited && !b.providerFinalized;
+      // Prioritize contracts that are 'active' and waiting for provider action (client has finalized)
+      const aIsReadyForProviderFinalize = a.status === "active" && a.clientDeposited && a.clientAction === "finalize" && a.providerAction === "none";
+      const bIsReadyForProviderFinalize = b.status === "active" && b.clientDeposited && b.clientAction === "finalize" && b.providerAction === "none";
 
-      if (aIsActive && !bIsActive) return -1;
-      if (!aIsActive && bIsActive) return 1;
+      if (aIsReadyForProviderFinalize && !bIsReadyForProviderFinalize) return -1;
+      if (!aIsReadyForProviderFinalize && bIsReadyForProviderFinalize) return 1;
+
+      // Then prioritize contracts that are 'active' and waiting for client action (provider has finalized)
+      const aIsProviderFinalizedWaitingClient = a.status === "active" && a.clientDeposited && a.providerAction === "finalize" && a.clientAction === "none";
+      const bIsProviderFinalizedWaitingClient = b.status === "active" && b.clientDeposited && b.providerAction === "finalize" && b.clientAction === "none";
+
+      if (aIsProviderFinalizedWaitingClient && !bIsProviderFinalizedWaitingClient) return -1;
+      if (!aIsProviderFinalizedWaitingClient && bIsProviderFinalizedWaitingClient) return 1;
+
+      // Then prioritize 'active' contracts where no one has acted yet
+      const aIsPurelyActive = a.status === "active" && a.clientDeposited && a.clientAction === "none" && a.providerAction === "none";
+      const bIsPurelyActive = b.status === "active" && b.clientDeposited && b.clientAction === "none" && b.providerAction === "none";
+
+      if (aIsPurelyActive && !bIsPurelyActive) return -1;
+      if (!aIsPurelyActive && bIsPurelyActive) return 1;
+
+      // Then prioritize 'pending' contracts
+      if (a.status === "pending" && b.status !== "pending") return -1;
+      if (a.status !== "pending" && b.status === "pending") return 1;
 
       // Then sort by creation date (most recent first)
       return b.createdAt - a.createdAt;
@@ -62,8 +80,7 @@ const ProviderDashboard: React.FC = () => {
 
     // Take only the last 3
     return filteredContracts.slice(0, 3);
-  }, [providerContracts, searchTermContracts, findUserById]);
-
+  }, [providerContracts, searchTermContracts, findUserById, contracts]); // Add 'contracts' to dependencies
 
   // Calculate accumulated earnings
   const accumulatedEarnings = providerContracts.reduce((total, contract) => {
@@ -74,7 +91,15 @@ const ProviderDashboard: React.FC = () => {
   }, 0);
 
   const handleFinalizeService = (contractId: string) => {
-    finalizeContractByProvider(contractId);
+    if (currentUser) {
+      handleContractAction(contractId, currentUser.id, 'finalize');
+    }
+  };
+
+  const handleCancelContract = (contractId: string) => {
+    if (currentUser) {
+      handleContractAction(contractId, currentUser.id, 'cancel');
+    }
   };
 
   if (!provider) {
@@ -224,7 +249,54 @@ const ProviderDashboard: React.FC = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {displayedContracts.map((contract) => {
-                const clientUser = findUserById(contract.clientId); // Obtener el cliente por su ID
+                const clientUser = findUserById(contract.clientId);
+                const canProviderFinalize = contract.status === "active" && contract.clientDeposited && contract.providerAction === "none" && contract.clientAction !== "cancel";
+                const canProviderCancel = (contract.status === "pending" || contract.status === "active") && contract.providerAction === "none" && contract.clientAction !== "finalize";
+                const providerHasActed = contract.providerAction !== "none";
+
+                let statusText = "";
+                let statusColorClass = "";
+
+                switch (contract.status) {
+                  case "pending":
+                    statusText = "Pendiente de pago del cliente";
+                    statusColorClass = "text-yellow-600";
+                    break;
+                  case "active":
+                    if (contract.providerAction === "finalize" && contract.clientAction === "none") {
+                      statusText = "Activo (Esperando confirmación del cliente)";
+                      statusColorClass = "text-blue-600";
+                    } else if (contract.clientAction === "finalize" && contract.providerAction === "none") {
+                      statusText = "Activo (Cliente finalizó, esperando tu confirmación)";
+                      statusColorClass = "text-blue-600";
+                    } else if (contract.providerAction === "cancel" && contract.clientAction === "none") {
+                      statusText = "Cancelación iniciada (Esperando cliente)";
+                      statusColorClass = "text-red-600";
+                    } else if (contract.clientAction === "cancel" && contract.providerAction === "none") {
+                      statusText = "Cancelación iniciada por cliente (Esperando tu acción)";
+                      statusColorClass = "text-red-600";
+                    } else {
+                      statusText = "Activo";
+                      statusColorClass = "text-blue-600";
+                    }
+                    break;
+                  case "finalized":
+                    statusText = "Finalizado";
+                    statusColorClass = "text-green-600";
+                    break;
+                  case "cancelled":
+                    statusText = "Cancelado";
+                    statusColorClass = "text-red-600";
+                    break;
+                  case "disputed":
+                    statusText = "En Disputa";
+                    statusColorClass = "text-orange-600";
+                    break;
+                  default:
+                    statusText = "Desconocido";
+                    statusColorClass = "text-gray-500";
+                }
+
                 return (
                   <Card key={contract.id} className="flex flex-col">
                     <CardHeader>
@@ -237,21 +309,8 @@ const ProviderDashboard: React.FC = () => {
                       </CardDescription>
                       <CardDescription>
                         Estado:{" "}
-                        <span
-                          className={`font-semibold ${
-                            contract.status === "pending"
-                              ? "text-yellow-600"
-                              : contract.status === "active"
-                              ? "text-blue-600"
-                              : contract.status === "finalized"
-                              ? "text-green-600"
-                              : "text-red-600"
-                          }`}
-                        >
-                          {contract.status === "pending" && "Pendiente de pago del cliente"}
-                          {contract.status === "active" && "Activo"}
-                          {contract.status === "finalized" && "Finalizado"}
-                          {contract.status === "cancelled" && "Cancelado"}
+                        <span className={`font-semibold ${statusColorClass}`}>
+                          {statusText}
                         </span>
                       </CardDescription>
                     </CardHeader>
@@ -264,14 +323,30 @@ const ProviderDashboard: React.FC = () => {
                         {contract.clientDeposited ? "Sí" : "No"}
                       </p>
                       <p className="mb-1">
-                        <span className="font-medium">Proveedor Finalizó:</span>{" "}
-                        {contract.providerFinalized ? "Sí" : "No"}
+                        <span className="font-medium">Tu Acción:</span>{" "}
+                        {contract.providerAction === "none" ? "Ninguna" : contract.providerAction === "finalize" ? "Finalizar" : "Cancelar"}
                       </p>
-                      {contract.status === "active" && contract.clientDeposited && !contract.providerFinalized && (
-                        <Button className="mt-4 w-full" onClick={() => handleFinalizeService(contract.id)}>
-                          Finalizar Contrato
-                        </Button>
-                      )}
+                      <p className="mb-1">
+                        <span className="font-medium">Acción Cliente:</span>{" "}
+                        {contract.clientAction === "none" ? "Ninguna" : contract.clientAction === "finalize" ? "Finalizar" : "Cancelar"}
+                      </p>
+                      <div className="flex flex-col gap-2 mt-4">
+                        {canProviderFinalize && (
+                          <Button className="w-full" onClick={() => handleFinalizeService(contract.id)}>
+                            Finalizar Contrato
+                          </Button>
+                        )}
+                        {canProviderCancel && (
+                          <Button variant="outline" className="w-full" onClick={() => handleCancelContract(contract.id)}>
+                            Cancelar Contrato
+                          </Button>
+                        )}
+                        {providerHasActed && contract.status === "active" && (
+                          <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
+                            Esperando acción de la otra parte.
+                          </p>
+                        )}
+                      </div>
                     </CardContent>
                   </Card>
                 );

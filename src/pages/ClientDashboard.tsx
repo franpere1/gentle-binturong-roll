@@ -25,19 +25,19 @@ import ClientProfileEditor from "@/components/ClientProfileEditor";
 import ProviderContactModal from "@/components/ProviderContactModal";
 import ContractCompletionModal from "@/components/ContractCompletionModal";
 import FeedbackModal from "@/components/FeedbackModal";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"; // Import Avatar components
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const ClientDashboard: React.FC = () => {
   const { currentUser, getAllProviders } = useAuth();
-  const { getContractsForUser } = useContracts();
+  const { getContractsForUser, handleContractAction, contracts } = useContracts(); // Añadir contracts del contexto
   const client = currentUser as Client;
   const [isEditing, setIsEditing] = useState(false);
   const [searchTermProviders, setSearchTermProviders] = useState("");
-  const [searchTermContracts, setSearchTermContracts] = useState(""); // Nuevo estado para la búsqueda de contratos
+  const [searchTermContracts, setSearchTermContracts] = useState("");
   const [displayedProviders, setDisplayedProviders] = useState<Provider[]>([]);
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
-  const [isCompletionModalOpen, setIsCompletionModalOpen] = useState(false);
+  const [isCompletionModalOpen, setIsCompletionModal] = useState(false);
   const [contractToFinalize, setContractToFinalize] = useState<Contract | null>(null);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const [feedbackData, setFeedbackData] = useState<{ contract: Contract; providerName: string } | null>(null);
@@ -81,12 +81,30 @@ const ClientDashboard: React.FC = () => {
 
     // Sort: active contracts first, then by creation date (most recent)
     filteredContracts.sort((a, b) => {
-      // Active contracts (clientDeposited && providerFinalized) come first
-      const aIsActive = a.status === "active" && a.clientDeposited && a.providerFinalized;
-      const bIsActive = b.status === "active" && b.clientDeposited && b.providerFinalized;
+      // Prioritize contracts that are 'active' and waiting for client action (provider has finalized)
+      const aIsReadyForClientFinalize = a.status === "active" && a.clientDeposited && a.providerAction === "finalize" && a.clientAction === "none";
+      const bIsReadyForClientFinalize = b.status === "active" && b.clientDeposited && b.providerAction === "finalize" && b.clientAction === "none";
 
-      if (aIsActive && !bIsActive) return -1;
-      if (!aIsActive && bIsActive) return 1;
+      if (aIsReadyForClientFinalize && !bIsReadyForClientFinalize) return -1;
+      if (!aIsReadyForClientFinalize && bIsReadyForClientFinalize) return 1;
+
+      // Then prioritize contracts that are 'active' and waiting for provider action (client has finalized)
+      const aIsClientFinalizedWaitingProvider = a.status === "active" && a.clientDeposited && a.clientAction === "finalize" && a.providerAction === "none";
+      const bIsClientFinalizedWaitingProvider = b.status === "active" && b.clientDeposited && b.clientAction === "finalize" && b.providerAction === "none";
+
+      if (aIsClientFinalizedWaitingProvider && !bIsClientFinalizedWaitingProvider) return -1;
+      if (!aIsClientFinalizedWaitingProvider && bIsClientFinalizedWaitingProvider) return 1;
+
+      // Then prioritize 'active' contracts where no one has acted yet
+      const aIsPurelyActive = a.status === "active" && a.clientDeposited && a.clientAction === "none" && a.providerAction === "none";
+      const bIsPurelyActive = b.status === "active" && b.clientDeposited && b.clientAction === "none" && b.providerAction === "none";
+
+      if (aIsPurelyActive && !bIsPurelyActive) return -1;
+      if (!aIsPurelyActive && bIsPurelyActive) return 1;
+
+      // Then prioritize 'pending' contracts
+      if (a.status === "pending" && b.status !== "pending") return -1;
+      if (a.status !== "pending" && b.status === "pending") return 1;
 
       // Then sort by creation date (most recent first)
       return b.createdAt - a.createdAt;
@@ -94,7 +112,19 @@ const ClientDashboard: React.FC = () => {
 
     // Take only the last 3
     return filteredContracts.slice(0, 3);
-  }, [clientContracts, searchTermContracts, allProviders]);
+  }, [clientContracts, searchTermContracts, allProviders, contracts]); // Add 'contracts' to dependencies to re-evaluate on contract changes
+
+  // Effect to open feedback modal if a contract just became finalized
+  useEffect(() => {
+    if (contractToFinalize && contractToFinalize.status === "finalized" && !isFeedbackModalOpen) {
+      const provider = allProviders.find(p => p.id === contractToFinalize.providerId);
+      if (provider) {
+        setFeedbackData({ contract: contractToFinalize, providerName: provider.name });
+        setIsFeedbackModalOpen(true);
+        setContractToFinalize(null); // Clear after opening feedback
+      }
+    }
+  }, [contracts, contractToFinalize, isFeedbackModalOpen, allProviders]);
 
 
   const handleContactProvider = (provider: Provider) => {
@@ -102,14 +132,15 @@ const ClientDashboard: React.FC = () => {
     setIsContactModalOpen(true);
   };
 
-  const handleCloseContract = (contract: Contract) => {
+  const handleFinalizeContractClick = (contract: Contract) => {
     setContractToFinalize(contract);
     setIsCompletionModalOpen(true);
   };
 
-  const handleFeedbackProvided = (contract: Contract, providerName: string) => {
-    setFeedbackData({ contract, providerName });
-    setIsFeedbackModalOpen(true);
+  const handleCancelContract = (contractId: string) => {
+    if (currentUser) {
+      handleContractAction(contractId, currentUser.id, 'cancel');
+    }
   };
 
   if (!client) {
@@ -196,6 +227,53 @@ const ClientDashboard: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {displayedContracts.map((contract) => {
                 const provider = allProviders.find(p => p.id === contract.providerId);
+                const canClientFinalize = contract.status === "active" && contract.clientDeposited && contract.providerAction === "finalize" && contract.clientAction === "none";
+                const canClientCancel = (contract.status === "pending" || contract.status === "active") && contract.clientAction === "none" && contract.providerAction !== "finalize";
+                const clientHasActed = contract.clientAction !== "none";
+
+                let statusText = "";
+                let statusColorClass = "";
+
+                switch (contract.status) {
+                  case "pending":
+                    statusText = "Pendiente de pago";
+                    statusColorClass = "text-yellow-600";
+                    break;
+                  case "active":
+                    if (contract.clientAction === "finalize" && contract.providerAction === "none") {
+                      statusText = "Activo (Esperando confirmación del proveedor)";
+                      statusColorClass = "text-blue-600";
+                    } else if (contract.providerAction === "finalize" && contract.clientAction === "none") {
+                      statusText = "Activo (Proveedor finalizó, esperando tu confirmación)";
+                      statusColorClass = "text-blue-600";
+                    } else if (contract.clientAction === "cancel" && contract.providerAction === "none") {
+                      statusText = "Cancelación iniciada (Esperando proveedor)";
+                      statusColorClass = "text-red-600";
+                    } else if (contract.providerAction === "cancel" && contract.clientAction === "none") {
+                      statusText = "Cancelación iniciada por proveedor (Esperando tu acción)";
+                      statusColorClass = "text-red-600";
+                    } else {
+                      statusText = "Activo";
+                      statusColorClass = "text-blue-600";
+                    }
+                    break;
+                  case "finalized":
+                    statusText = "Finalizado";
+                    statusColorClass = "text-green-600";
+                    break;
+                  case "cancelled":
+                    statusText = "Cancelado";
+                    statusColorClass = "text-red-600";
+                    break;
+                  case "disputed":
+                    statusText = "En Disputa";
+                    statusColorClass = "text-orange-600";
+                    break;
+                  default:
+                    statusText = "Desconocido";
+                    statusColorClass = "text-gray-500";
+                }
+
                 return (
                   <Card key={contract.id} className="flex flex-col">
                     <CardHeader>
@@ -205,21 +283,8 @@ const ClientDashboard: React.FC = () => {
                       </CardDescription>
                       <CardDescription>
                         Estado:{" "}
-                        <span
-                          className={`font-semibold ${
-                            contract.status === "pending"
-                              ? "text-yellow-600"
-                              : contract.status === "active"
-                              ? "text-blue-600"
-                              : contract.status === "finalized"
-                              ? "text-green-600"
-                              : "text-red-600"
-                          }`}
-                        >
-                          {contract.status === "pending" && "Pendiente de pago"}
-                          {contract.status === "active" && "Activo"}
-                          {contract.status === "finalized" && "Finalizado"}
-                          {contract.status === "cancelled" && "Cancelado"}
+                        <span className={`font-semibold ${statusColorClass}`}>
+                          {statusText}
                         </span>
                       </CardDescription>
                     </CardHeader>
@@ -232,14 +297,30 @@ const ClientDashboard: React.FC = () => {
                         {contract.clientDeposited ? "Sí" : "No"}
                       </p>
                       <p className="mb-1">
-                        <span className="font-medium">Proveedor Finalizó:</span>{" "}
-                        {contract.providerFinalized ? "Sí" : "No"}
+                        <span className="font-medium">Tu Acción:</span>{" "}
+                        {contract.clientAction === "none" ? "Ninguna" : contract.clientAction === "finalize" ? "Finalizar" : "Cancelar"}
                       </p>
-                      {contract.status === "active" && contract.clientDeposited && contract.providerFinalized && (
-                        <Button className="mt-4 w-full" onClick={() => handleCloseContract(contract)}>
-                          Finalizar Contrato
-                        </Button>
-                      )}
+                      <p className="mb-1">
+                        <span className="font-medium">Acción Proveedor:</span>{" "}
+                        {contract.providerAction === "none" ? "Ninguna" : contract.providerAction === "finalize" ? "Finalizar" : "Cancelar"}
+                      </p>
+                      <div className="flex flex-col gap-2 mt-4">
+                        {canClientFinalize && (
+                          <Button className="w-full" onClick={() => handleFinalizeContractClick(contract)}>
+                            Finalizar Contrato
+                          </Button>
+                        )}
+                        {canClientCancel && (
+                          <Button variant="outline" className="w-full" onClick={() => handleCancelContract(contract.id)}>
+                            Cancelar Contrato
+                          </Button>
+                        )}
+                        {clientHasActed && contract.status === "active" && (
+                          <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
+                            Esperando acción de la otra parte.
+                          </p>
+                        )}
+                      </div>
                     </CardContent>
                   </Card>
                 );
@@ -319,10 +400,10 @@ const ClientDashboard: React.FC = () => {
           onClose={() => setIsContactModalOpen(false)}
         />
       )}
-      {contractToFinalize && (
+      {isCompletionModalOpen && contractToFinalize && (
         <ContractCompletionModal
           isOpen={isCompletionModalOpen}
-          onClose={() => setIsCompletionModalOpen(false)}
+          onClose={() => setIsCompletionModal(false)}
           contract={contractToFinalize}
           providerName={allProviders.find(p => p.id === contractToFinalize.providerId)?.name || "Desconocido"}
           onFeedbackProvided={handleFeedbackProvided}

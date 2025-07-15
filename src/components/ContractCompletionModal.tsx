@@ -9,14 +9,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Contract } from "@/types";
 import { useContracts } from "@/context/ContractContext";
-import { useChat } from "@/context/ChatContext"; // Importar useChat
+import { useAuth } from "@/context/AuthContext"; // Importar useAuth para obtener el currentUser
 
 interface ContractCompletionModalProps {
   isOpen: boolean;
   onClose: () => void;
   contract: Contract;
   providerName: string;
-  onFeedbackProvided: (contract: Contract, providerName: string) => void; // Nueva prop
+  onFeedbackProvided: (contract: Contract, providerName: string) => void;
 }
 
 const ContractCompletionModal: React.FC<ContractCompletionModalProps> = ({
@@ -26,14 +26,14 @@ const ContractCompletionModal: React.FC<ContractCompletionModalProps> = ({
   providerName,
   onFeedbackProvided,
 }) => {
-  const { releaseFunds } = useContracts();
-  const { clearConversationMessages } = useChat(); // Usar el contexto de chat
+  const { currentUser } = useAuth();
+  const { handleContractAction } = useContracts();
 
   const handleConfirmCompletion = () => {
-    if (releaseFunds(contract.id)) {
-      // Borrar el historial del chat entre el cliente y el proveedor
-      clearConversationMessages(contract.clientId, contract.providerId);
-      onFeedbackProvided(contract, providerName); // Llamar a la nueva prop
+    if (currentUser) {
+      handleContractAction(contract.id, currentUser.id, 'finalize');
+      // La lógica de feedback se manejará en el dashboard después de que el estado del contrato se actualice a 'finalized'
+      // Por ahora, solo cerramos el modal. El dashboard se encargará de reabrir el modal de feedback si es necesario.
     }
     onClose();
   };

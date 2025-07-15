@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import { Contract, User } from "@/types";
 import { useAuth } from "./AuthContext";
+import { useChat } from "./ChatContext"; // Importar useChat
 import { showSuccess, showError } from "@/utils/toast";
 
 interface ContractContextType {
@@ -12,11 +13,10 @@ interface ContractContextType {
     serviceRate: number
   ) => Contract | null;
   depositFunds: (contractId: string) => boolean;
-  finalizeContractByProvider: (contractId: string) => boolean;
-  releaseFunds: (contractId: string) => boolean;
+  handleContractAction: (contractId: string, actorId: string, actionType: 'finalize' | 'cancel') => void; // Nueva función
   getContractsForUser: (userId: string) => Contract[];
   hasActiveOrPendingContract: (clientId: string, providerId: string) => boolean;
-  getLatestContractBetweenUsers: (user1Id: string, user2Id: string) => Contract | null; // Nueva función
+  getLatestContractBetweenUsers: (user1Id: string, user2Id: string) => Contract | null;
 }
 
 const ContractContext = createContext<ContractContextType | undefined>(undefined);
@@ -27,6 +27,7 @@ interface ContractProviderProps {
 
 export const ContractProvider: React.FC<ContractProviderProps> = ({ children }) => {
   const { currentUser } = useAuth();
+  const { clearConversationMessages } = useChat(); // Usar el contexto de chat
   const [contracts, setContracts] = useState<Contract[]>(() => {
     const storedContracts = localStorage.getItem("appContracts");
     return storedContracts ? JSON.parse(storedContracts) : [];
@@ -81,7 +82,8 @@ export const ContractProvider: React.FC<ContractProviderProps> = ({ children }) 
       serviceRate,
       status: "pending",
       clientDeposited: false,
-      providerFinalized: false,
+      clientAction: "none", // Inicializar
+      providerAction: "none", // Inicializar
       commissionRate: 0.10, // 10% de comisión
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -107,40 +109,84 @@ export const ContractProvider: React.FC<ContractProviderProps> = ({ children }) 
     return success;
   };
 
-  const finalizeContractByProvider = (contractId: string): boolean => {
-    let success = false;
-    setContracts((prev) =>
-      prev.map((contract) => {
-        if (contract.id === contractId && contract.status === "active" && contract.clientDeposited && !contract.providerFinalized) {
-          success = true;
-          showSuccess(`Servicio "${contract.serviceTitle}" marcado como finalizado por el proveedor. Esperando confirmación del cliente.`);
-          return { ...contract, providerFinalized: true, updatedAt: Date.now() };
+  const handleContractAction = (contractId: string, actorId: string, actionType: 'finalize' | 'cancel') => {
+    setContracts((prevContracts) => {
+      return prevContracts.map((contract) => {
+        if (contract.id !== contractId) {
+          return contract;
         }
-        return contract;
-      })
-    );
-    return success;
-  };
 
-  const releaseFunds = (contractId: string): boolean => {
-    let success = false;
-    setContracts((prev) =>
-      prev.map((contract) => {
-        if (contract.id === contractId && contract.status === "active" && contract.clientDeposited && contract.providerFinalized) {
-          const amountToProvider = contract.serviceRate * (1 - contract.commissionRate);
-          const commissionAmount = contract.serviceRate * contract.commissionRate;
+        let updatedContract = { ...contract, updatedAt: Date.now() };
+
+        // 1. Registrar la acción del actor
+        if (actorId === contract.clientId) {
+          if (updatedContract.clientAction !== "none") {
+            showError("Ya has realizado una acción en este contrato.");
+            return contract; // No modificar si ya actuó
+          }
+          updatedContract.clientAction = actionType;
+        } else if (actorId === contract.providerId) {
+          if (updatedContract.providerAction !== "none") {
+            showError("Ya has realizado una acción en este contrato.");
+            return contract; // No modificar si ya actuó
+          }
+          updatedContract.providerAction = actionType;
+        } else {
+          showError("Usuario no autorizado para esta acción.");
+          return contract;
+        }
+
+        // 2. Determinar el nuevo estado del contrato
+        const { clientAction, providerAction, status, serviceRate, commissionRate } = updatedContract;
+
+        if (status === "finalized" || status === "cancelled" || status === "disputed") {
+          showError("Este contrato ya ha sido finalizado, cancelado o está en disputa.");
+          return contract;
+        }
+
+        if (clientAction === "finalize" && providerAction === "finalize") {
+          updatedContract.status = "finalized";
+          const amountToProvider = serviceRate * (1 - commissionRate);
+          const commissionAmount = serviceRate * commissionRate;
           showSuccess(
-            `Fondos liberados para el servicio "${contract.serviceTitle}". ` +
+            `Contrato "${updatedContract.serviceTitle}" finalizado. ` +
             `Proveedor recibe $${amountToProvider.toFixed(2)} USD. ` +
             `Comisión de la plataforma: $${commissionAmount.toFixed(2)} USD.`
           );
-          success = true;
-          return { ...contract, status: "finalized", updatedAt: Date.now() };
+          clearConversationMessages(updatedContract.clientId, updatedContract.providerId);
+        } else if (clientAction === "cancel" && providerAction === "cancel") {
+          updatedContract.status = "cancelled";
+          showSuccess(`Contrato "${updatedContract.serviceTitle}" cancelado por ambas partes. Fondos reembolsados al cliente.`);
+          clearConversationMessages(updatedContract.clientId, updatedContract.providerId);
+        } else if (
+          (clientAction === "finalize" && providerAction === "cancel") ||
+          (clientAction === "cancel" && providerAction === "finalize")
+        ) {
+          updatedContract.status = "disputed";
+          showError(`Conflicto en el contrato "${updatedContract.serviceTitle}". Se ha iniciado una disputa. Un administrador revisará el caso.`);
+        } else if (actionType === 'cancel' && updatedContract.clientDeposited) {
+            // If one party cancels and the other hasn't acted yet, and funds are deposited, it's a cancellation.
+            // This covers cases where client cancels active contract, or provider cancels active contract.
+            // If client cancels a pending contract, it's handled by the first condition.
+            if (
+                (actorId === contract.clientId && providerAction === "none") ||
+                (actorId === contract.providerId && clientAction === "none")
+            ) {
+                updatedContract.status = "cancelled";
+                showSuccess(`Contrato "${updatedContract.serviceTitle}" cancelado. Fondos reembolsados al cliente.`);
+                clearConversationMessages(updatedContract.clientId, updatedContract.providerId);
+            } else {
+                // One party cancelled, other has not acted yet, but contract is not active (e.g., pending)
+                showSuccess(`Tu acción de ${actionType === 'finalize' ? 'finalizar' : 'cancelar'} el contrato "${updatedContract.serviceTitle}" ha sido registrada. Esperando la acción de la otra parte.`);
+            }
+        } else {
+          // Acción registrada, esperando a la otra parte o contrato aún pendiente de depósito
+          showSuccess(`Tu acción de ${actionType === 'finalize' ? 'finalizar' : 'cancelar'} el contrato "${updatedContract.serviceTitle}" ha sido registrada. Esperando la acción de la otra parte.`);
         }
-        return contract;
-      })
-    );
-    return success;
+
+        return updatedContract;
+      });
+    });
   };
 
   const getContractsForUser = (userId: string): Contract[] => {
@@ -155,11 +201,10 @@ export const ContractProvider: React.FC<ContractProviderProps> = ({ children }) 
         contracts,
         createContract,
         depositFunds,
-        finalizeContractByProvider,
-        releaseFunds,
+        handleContractAction,
         getContractsForUser,
         hasActiveOrPendingContract,
-        getLatestContractBetweenUsers, // Añadir al contexto
+        getLatestContractBetweenUsers,
       }}
     >
       {children}
