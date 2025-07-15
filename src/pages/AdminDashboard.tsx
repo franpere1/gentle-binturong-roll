@@ -18,42 +18,31 @@ import { showError, showSuccess } from "@/utils/toast";
 const AdminDashboard: React.FC = () => {
   const { currentUser, findUserById } = useAuth();
   const { contracts, resolveDispute } = useContracts();
-  const [searchTermDisputes, setSearchTermDisputes] = useState(""); // New state for search term
+  const [searchTermDisputes, setSearchTermDisputes] = useState("");
 
-  // Filter for disputed contracts
-  const disputedContracts = useMemo(() => {
+  // Combined list of all relevant contracts (disputed and finalized_by_dispute)
+  const allRelevantContracts = useMemo(() => {
     const lowerCaseSearchTerm = searchTermDisputes.toLowerCase();
-    let filtered = contracts.filter(contract => contract.status === "disputed");
+    return contracts.filter(contract => 
+      (contract.status === "disputed" || contract.status === "finalized_by_dispute") &&
+      (contract.serviceTitle.toLowerCase().includes(lowerCaseSearchTerm) ||
+       (findUserById(contract.clientId)?.name.toLowerCase() || "").includes(lowerCaseSearchTerm) ||
+       (findUserById(contract.providerId)?.name.toLowerCase() || "").includes(lowerCaseSearchTerm))
+    );
+  }, [contracts, searchTermDisputes, findUserById]);
 
-    if (lowerCaseSearchTerm) {
-      filtered = filtered.filter(contract => {
-        const client = findUserById(contract.clientId);
-        const provider = findUserById(contract.providerId);
-        const clientName = client ? client.name.toLowerCase() : "";
-        const providerName = provider ? provider.name.toLowerCase() : "";
+  // Separate and sort for display
+  const displayedDisputedContracts = useMemo(() => {
+    let filtered = allRelevantContracts.filter(contract => contract.status === "disputed");
+    filtered.sort((a, b) => b.createdAt - a.createdAt); // Sort by creation date (most recent first)
+    return searchTermDisputes ? filtered : filtered.slice(0, 3); // Limit to 3 if no search term
+  }, [allRelevantContracts, searchTermDisputes]);
 
-        return (
-          contract.serviceTitle.toLowerCase().includes(lowerCaseSearchTerm) ||
-          clientName.includes(lowerCaseSearchTerm) ||
-          providerName.includes(lowerCaseSearchTerm)
-        );
-      });
-      // When there's a search term, sort all matching results
-      filtered.sort((a, b) => b.createdAt - a.createdAt);
-      return filtered; // Return all filtered results
-    } else {
-      // When no search term, return only the last 3
-      filtered.sort((a, b) => b.createdAt - a.createdAt);
-      return filtered.slice(0, 3);
-    }
-  }, [contracts, searchTermDisputes, findUserById]); // Add searchTermDisputes to dependencies
-
-  // Filter for resolved disputes
-  const resolvedDisputes = useMemo(() => {
-    return contracts.filter(contract => contract.status === "finalized_by_dispute")
-      .sort((a, b) => b.updatedAt - a.updatedAt) // Sort by most recently updated
-      .slice(0, 3); // Take only the last 3
-  }, [contracts]);
+  const displayedResolvedDisputes = useMemo(() => {
+    let filtered = allRelevantContracts.filter(contract => contract.status === "finalized_by_dispute");
+    filtered.sort((a, b) => b.updatedAt - a.updatedAt); // Sort by most recently updated
+    return searchTermDisputes ? filtered : filtered.slice(0, 3); // Limit to 3 if no search term
+  }, [allRelevantContracts, searchTermDisputes]);
 
   const handleResolveToProvider = (contract: Contract) => {
     if (currentUser?.type === "admin") {
@@ -102,7 +91,7 @@ const AdminDashboard: React.FC = () => {
             Gestiona los contratos en disputa y revisa las resoluciones.
           </p>
 
-          <h2 className="text-2xl font-bold mb-4 text-center">Últimas Disputas Activas</h2>
+          <h2 className="text-2xl font-bold mb-4 text-center">Disputas Activas</h2>
           <div className="mb-6">
             <Input
               type="text"
@@ -112,17 +101,17 @@ const AdminDashboard: React.FC = () => {
               className="w-full"
             />
           </div>
-          {disputedContracts.length === 0 && searchTermDisputes !== "" ? (
+          {displayedDisputedContracts.length === 0 && searchTermDisputes !== "" ? (
             <p className="text-center text-gray-600 dark:text-gray-400">
-              No se encontraron disputas que coincidan con tu búsqueda.
+              No se encontraron disputas activas que coincidan con tu búsqueda.
             </p>
-          ) : disputedContracts.length === 0 && searchTermDisputes === "" ? (
+          ) : displayedDisputedContracts.length === 0 && searchTermDisputes === "" ? (
             <p className="text-center text-gray-600 dark:text-gray-400">
               No hay contratos en disputa actualmente.
             </p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {disputedContracts.map((contract) => {
+              {displayedDisputedContracts.map((contract) => {
                 const client = findUserById(contract.clientId) as Client | undefined;
                 const provider = findUserById(contract.providerId) as Provider | undefined;
 
@@ -174,13 +163,17 @@ const AdminDashboard: React.FC = () => {
           )}
 
           <h2 className="text-2xl font-bold mt-8 mb-4 text-center">Historial de Disputas Resueltas</h2>
-          {resolvedDisputes.length === 0 ? (
+          {displayedResolvedDisputes.length === 0 && searchTermDisputes !== "" ? (
+            <p className="text-center text-gray-600 dark:text-gray-400">
+              No se encontraron disputas resueltas que coincidan con tu búsqueda.
+            </p>
+          ) : displayedResolvedDisputes.length === 0 && searchTermDisputes === "" ? (
             <p className="text-center text-gray-600 dark:text-gray-400">
               No hay disputas resueltas aún.
             </p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {resolvedDisputes.map((contract) => {
+              {displayedResolvedDisputes.map((contract) => {
                 const client = findUserById(contract.clientId) as Client | undefined;
                 const provider = findUserById(contract.providerId) as Provider | undefined;
 
