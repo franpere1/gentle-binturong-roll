@@ -84,7 +84,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
     const newUser = { ...client, id: `user-${users.length + 1}` };
     setUsers((prevUsers) => [...prevUsers, newUser]);
-    showSuccess("Registro de cliente exitoso. ¡Ahora puedes iniciar sesión!");
+    setCurrentUser(newUser); // Log in the new client immediately
+    showSuccess("Registro de cliente exitoso. ¡Ahora estás logeado!");
     return true;
   };
 
@@ -95,7 +96,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
     const newUser = { ...provider, id: `user-${users.length + 1}`, feedback: [], starRating: 0 };
     setUsers((prevUsers) => [...prevUsers, newUser]);
-    showSuccess("Registro de proveedor exitoso. ¡Ahora puedes iniciar sesión!");
+    setCurrentUser(newUser); // Log in the new provider immediately
+    showSuccess("Registro de proveedor exitoso. ¡Ahora estás logeado!");
     return true;
   };
 

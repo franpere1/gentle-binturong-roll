@@ -109,13 +109,12 @@ const ClientRegistrationForm: React.FC = () => {
   const [state, setState] = useState("");
   const [password, setPassword] = useState("");
   const { registerClient } = useAuth();
-  const navigate = useNavigate();
+  // No need for navigate here, Index.tsx handles redirection based on currentUser
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (registerClient({ id: "", name, email, state, password, type: "client" })) {
-      navigate("/auth"); // Redirect to login after successful registration
-    }
+    registerClient({ id: "", name, email, state, password, type: "client" });
+    // Redirection is now handled by the Index.tsx component based on currentUser state
   };
 
   return (
@@ -183,7 +182,7 @@ const ProviderRegistrationForm: React.FC = () => {
   const [password, setPassword] = useState("");
   const [rate, setRate] = useState<number | ''>(''); // Nuevo estado para la tarifa
   const { registerProvider } = useAuth();
-  const navigate = useNavigate();
+  // No need for navigate here, Index.tsx handles redirection based on currentUser
 
   const serviceCategories: ServiceCategory[] = [
     "Plomería",
@@ -210,23 +209,20 @@ const ProviderRegistrationForm: React.FC = () => {
       return;
     }
 
-    if (
-      registerProvider({
-        id: "",
-        name,
-        email,
-        state,
-        password,
-        type: "provider",
-        category: category as ServiceCategory,
-        serviceTitle,
-        serviceDescription,
-        serviceImage,
-        rate: Number(rate), // Incluir la tarifa
-      })
-    ) {
-      navigate("/auth"); // Redirect to login after successful registration
-    }
+    registerProvider({
+      id: "",
+      name,
+      email,
+      state,
+      password,
+      type: "provider",
+      category: category as ServiceCategory,
+      serviceTitle,
+      serviceDescription,
+      serviceImage,
+      rate: Number(rate), // Incluir la tarifa
+    });
+    // Redirection is now handled by the Index.tsx component based on currentUser state
   };
 
   return (
