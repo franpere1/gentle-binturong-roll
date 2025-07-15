@@ -18,6 +18,21 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Header from "@/components/Header";
 import { MadeWithDyad } from "@/components/made-with-dyad";
 import { showError, showSuccess } from "@/utils/toast";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const Auth: React.FC = () => {
   const [activeTab, setActiveTab] = useState("login");
@@ -217,6 +232,8 @@ const ProviderRegistrationForm: React.FC = () => {
   const [password, setPassword] = useState("");
   const [rate, setRate] = useState<number | ''>('');
   const [profileImage, setProfileImage] = useState("");
+  const [openCategoryCombobox, setOpenCategoryCombobox] = useState(false); // State for combobox open/close
+
   const { registerProvider } = useAuth();
   const navigate = useNavigate();
 
@@ -262,7 +279,7 @@ const ProviderRegistrationForm: React.FC = () => {
     "Servicios digitales",
     "Servicios electrónica",
     "Técnico de aire acondicionado",
-  ];
+  ].sort(); // Ensure alphabetical order
 
   const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -353,18 +370,49 @@ const ProviderRegistrationForm: React.FC = () => {
       </div>
       <div>
         <Label htmlFor="provider-category">Categoría del Servicio</Label>
-        <Select value={category} onValueChange={(value) => setCategory(value as ServiceCategory)} required>
-          <SelectTrigger id="provider-category">
-            <SelectValue placeholder="Selecciona una categoría" />
-          </SelectTrigger>
-          <SelectContent>
-            {serviceCategories.map((cat) => (
-              <SelectItem key={cat} value={cat}>
-                {cat}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Popover open={openCategoryCombobox} onOpenChange={setOpenCategoryCombobox}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              role="combobox"
+              aria-expanded={openCategoryCombobox}
+              className="w-full justify-between"
+            >
+              {category
+                ? serviceCategories.find((c) => c === category)
+                : "Selecciona una categoría..."}
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+            <Command>
+              <CommandInput placeholder="Buscar categoría..." />
+              <CommandList>
+                <CommandEmpty>No se encontró categoría.</CommandEmpty>
+                <CommandGroup>
+                  {serviceCategories.map((cat) => (
+                    <CommandItem
+                      key={cat}
+                      value={cat}
+                      onSelect={(currentValue) => {
+                        setCategory(currentValue === category ? "" : (currentValue as ServiceCategory));
+                        setOpenCategoryCombobox(false);
+                      }}
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          category === cat ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                      {cat}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
       </div>
       <div>
         <Label htmlFor="provider-service-title">Título del Servicio</Label>

@@ -22,6 +22,21 @@ import { VENEZUELAN_STATES } from "@/constants/venezuelanStates";
 import { ServiceCategory, Provider } from "@/types";
 import { useAuth } from "@/context/AuthContext";
 import { showError, showSuccess } from "@/utils/toast"; // Import showSuccess
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface ProviderProfileEditorProps {
   onSave: () => void;
@@ -44,6 +59,7 @@ const ProviderProfileEditor: React.FC<ProviderProfileEditorProps> = ({
   const [serviceImage, setServiceImage] = useState(provider.serviceImage || "");
   const [rate, setRate] = useState<number | ''>(provider.rate);
   const [profileImage, setProfileImage] = useState(provider.profileImage || "");
+  const [openCategoryCombobox, setOpenCategoryCombobox] = useState(false); // State for combobox open/close
 
   const serviceCategories: ServiceCategory[] = [
     "Abogado",
@@ -87,7 +103,7 @@ const ProviderProfileEditor: React.FC<ProviderProfileEditorProps> = ({
     "Servicios digitales",
     "Servicios electrónica",
     "Técnico de aire acondicionado",
-  ];
+  ].sort(); // Ensure alphabetical order
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -192,18 +208,49 @@ const ProviderProfileEditor: React.FC<ProviderProfileEditorProps> = ({
       </div>
       <div>
         <Label htmlFor="edit-category">Categoría del Servicio</Label>
-        <Select value={category} onValueChange={(value) => setCategory(value as ServiceCategory)} required>
-          <SelectTrigger id="edit-category">
-            <SelectValue placeholder="Selecciona una categoría" />
-          </SelectTrigger>
-          <SelectContent>
-            {serviceCategories.map((cat) => (
-              <SelectItem key={cat} value={cat}>
-                {cat}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Popover open={openCategoryCombobox} onOpenChange={setOpenCategoryCombobox}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              role="combobox"
+              aria-expanded={openCategoryCombobox}
+              className="w-full justify-between"
+            >
+              {category
+                ? serviceCategories.find((c) => c === category)
+                : "Selecciona una categoría..."}
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+            <Command>
+              <CommandInput placeholder="Buscar categoría..." />
+              <CommandList>
+                <CommandEmpty>No se encontró categoría.</CommandEmpty>
+                <CommandGroup>
+                  {serviceCategories.map((cat) => (
+                    <CommandItem
+                      key={cat}
+                      value={cat}
+                      onSelect={(currentValue) => {
+                        setCategory(currentValue === category ? "" : (currentValue as ServiceCategory));
+                        setOpenCategoryCombobox(false);
+                      }}
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          category === cat ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                      {cat}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
       </div>
       <div>
         <Label htmlFor="edit-service-title">Título del Servicio</Label>
