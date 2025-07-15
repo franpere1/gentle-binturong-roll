@@ -28,6 +28,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import MakeOfferModal from "@/components/MakeOfferModal";
 import ChatWindow from "@/components/ChatWindow";
+import FeedbackCommentModal from "@/components/FeedbackCommentModal"; // Import the new modal
+
+const COMMENT_TRUNCATE_LENGTH = 150; // Define a length to truncate comments
 
 const ProviderDashboard: React.FC = () => {
   const { currentUser, findUserById } = useAuth();
@@ -41,6 +44,8 @@ const ProviderDashboard: React.FC = () => {
   const [isContractChatModalOpen, setIsContractChatModalOpen] = useState(false);
   const [chattingWithClient, setChattingWithClient] = useState<Client | null>(null);
   const [chatContractStatus, setChatContractStatus] = useState<Contract['status'] | 'initial_contact' | undefined>(undefined);
+  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false); // State for feedback modal
+  const [selectedFeedback, setSelectedFeedback] = useState<{ comment: string; clientName: string; feedbackType: string } | null>(null); // State for selected feedback
 
   const providerContracts = provider ? getContractsForUser(provider.id) : [];
 
@@ -141,6 +146,14 @@ const ProviderDashboard: React.FC = () => {
     }
   };
 
+  const handleViewFeedback = (comment: string, clientId: string, feedbackType: string) => {
+    const client = findUserById(clientId) as Client | undefined;
+    if (client) {
+      setSelectedFeedback({ comment, clientName: client.name, feedbackType });
+      setIsFeedbackModalOpen(true);
+    }
+  };
+
   if (!provider) {
     return (
       <div className="min-h-screen flex flex-col">
@@ -202,16 +215,31 @@ const ProviderDashboard: React.FC = () => {
                     <h4 className="font-semibold mb-2">Comentarios Recientes:</h4>
                     <ScrollArea className="h-40 w-full rounded-md border p-4">
                       <ul className="list-disc list-inside text-sm text-gray-600 dark:text-gray-400">
-                        {(provider.feedback || []).reverse().map((f, index) => (
-                          <li key={index} className="break-words">
-                            <span className={`font-medium ${
-                              f.type === "positive" ? "text-green-600" :
-                              f.type === "negative" ? "text-red-600" : "text-gray-500"
-                            }`}>
-                              {f.type === "positive" ? "Positivo" : f.type === "negative" ? "Negativo" : "Neutro"}
-                            </span>: "{f.comment}"
-                          </li>
-                        ))}
+                        {(provider.feedback || []).reverse().map((f, index) => {
+                          const isLongComment = f.comment.length > COMMENT_TRUNCATE_LENGTH;
+                          const displayedComment = isLongComment
+                            ? `${f.comment.substring(0, COMMENT_TRUNCATE_LENGTH)}...`
+                            : f.comment;
+                          return (
+                            <li key={index} className="break-words mb-2">
+                              <span className={`font-medium ${
+                                f.type === "positive" ? "text-green-600" :
+                                f.type === "negative" ? "text-red-600" : "text-gray-500"
+                              }`}>
+                                {f.type === "positive" ? "Positivo" : f.type === "negative" ? "Negativo" : "Neutro"}
+                              </span>: "{displayedComment}"
+                              {isLongComment && (
+                                <Button
+                                  variant="link"
+                                  className="p-0 h-auto ml-1 text-blue-500 dark:text-blue-400"
+                                  onClick={() => handleViewFeedback(f.comment, f.clientId, f.type)}
+                                >
+                                  Ver más
+                                </Button>
+                              )}
+                            </li>
+                          );
+                        })}
                       </ul>
                     </ScrollArea>
                   </div>
@@ -475,6 +503,15 @@ const ProviderDashboard: React.FC = () => {
             <ChatWindow otherUser={chattingWithClient} contractStatus={chatContractStatus} />
           </DialogContent>
         </Dialog>
+      )}
+      {isFeedbackModalOpen && selectedFeedback && (
+        <FeedbackCommentModal
+          isOpen={isFeedbackModalOpen}
+          onClose={() => setIsFeedbackModalOpen(false)}
+          comment={selectedFeedback.comment}
+          clientName={selectedFeedback.clientName}
+          feedbackType={selectedFeedback.feedbackType}
+        />
       )}
       <MadeWithDyad />
     </div>
