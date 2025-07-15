@@ -3,9 +3,16 @@ import Logo from "./Logo";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
+import { useNavigate } from "react-router-dom"; // Importar useNavigate
 
 const Header: React.FC = () => {
   const { currentUser, logout } = useAuth();
+  const navigate = useNavigate(); // Inicializar useNavigate
+
+  const handleLogout = () => {
+    logout();
+    navigate("/auth"); // Redirigir a la página de autenticación después de cerrar sesión
+  };
 
   return (
     <header className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
@@ -17,7 +24,7 @@ const Header: React.FC = () => {
           <span className="text-gray-700 dark:text-gray-300">
             Hola, {currentUser.name} ({currentUser.type === "client" ? "Cliente" : "Proveedor"})
           </span>
-          <Button onClick={logout} variant="outline">
+          <Button onClick={handleLogout} variant="outline"> {/* Usar handleLogout */}
             Cerrar Sesión
           </Button>
         </div>
