@@ -279,9 +279,11 @@ const ClientDashboard: React.FC = () => {
                   contract.clientAction !== "dispute"; // Client has not yet disputed
                 
                 // Client can cancel if:
-                // 1. Contract is offered (after provider offer) and client hasn't acted
-                // 2. Contract is active AND provider has initiated cancellation AND client hasn't acted
+                // 1. Contract is pending (before provider offer) and client hasn't acted
+                // 2. Contract is offered (after provider offer) and client hasn't acted
+                // 3. Contract is active AND provider has initiated cancellation AND client hasn't acted
                 const canClientCancel = 
+                  (contract.status === "pending" && contract.clientAction === "none") ||
                   (contract.status === "offered" && contract.clientAction === "none") ||
                   (contract.status === "active" && contract.clientDeposited && contract.providerAction === "cancel" && contract.clientAction === "none");
 

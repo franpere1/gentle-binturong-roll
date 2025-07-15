@@ -158,16 +158,46 @@ export const ContractProvider: React.FC<ContractProviderProps> = ({ children }) 
 
         let updatedContract = { ...contract, updatedAt: Date.now() };
 
-        console.log(`ContractContext: Before action - Contract ID: ${contract.id}, Client Action: ${contract.clientAction}, Provider Action: ${contract.providerAction}, Status: ${contract.status}`);
+        // --- Handle immediate cancellation for 'pending' or 'offered' contracts ---
+        if (actionType === 'cancel') {
+          if (actorId === contract.clientId) {
+            // Client cancels a pending contract (before provider offer)
+            if (updatedContract.status === "pending") {
+              showSuccess(`Contrato "${updatedContract.serviceTitle}" cancelado por el cliente.`);
+              clearConversationMessages(updatedContract.clientId, updatedContract.providerId);
+              return { ...updatedContract, status: "cancelled", clientAction: "cancel" };
+            }
+            // Client cancels an offered contract (before depositing funds)
+            if (updatedContract.status === "offered" && updatedContract.clientDeposited === false) {
+              showSuccess(`Oferta para "${updatedContract.serviceTitle}" rechazada y contrato cancelado por el cliente.`);
+              clearConversationMessages(updatedContract.clientId, updatedContract.providerId);
+              return { ...updatedContract, status: "cancelled", clientAction: "cancel" };
+            }
+          } else if (actorId === contract.providerId) {
+            // Provider cancels a pending contract (rejects client's request)
+            if (updatedContract.status === "pending") {
+              showSuccess(`Solicitud de contrato para "${updatedContract.serviceTitle}" rechazada por el proveedor.`);
+              clearConversationMessages(updatedContract.clientId, updatedContract.providerId);
+              return { ...updatedContract, status: "cancelled", providerAction: "cancel" };
+            }
+            // Provider cancels an offered contract (before client accepts)
+            if (updatedContract.status === "offered" && updatedContract.clientDeposited === false) {
+              showSuccess(`Oferta para "${updatedContract.serviceTitle}" retirada y contrato cancelado por el proveedor.`);
+              clearConversationMessages(updatedContract.clientId, updatedContract.providerId);
+              return { ...updatedContract, status: "cancelled", providerAction: "cancel" };
+            }
+          }
+        }
+        // --- End immediate cancellation handling ---
 
-        // Check if contract is already in a final state
+        // If contract is already in a final state (excluding the immediate cancellation above)
         if (updatedContract.status === "finalized" || updatedContract.status === "cancelled" || updatedContract.status === "disputed" || updatedContract.status === "finalized_by_dispute") {
           showError("Este contrato ya ha sido finalizado, cancelado o está en disputa.");
           console.log("ContractContext: Contract already in final state, returning original.");
           return contract;
         }
 
-        // Handle dispute action first (only client can initiate, and only if active and no prior action)
+        // Handle dispute action (only client can initiate, and only if active and no prior action)
         if (actionType === 'dispute') {
           if (actorId === contract.clientId) {
             if (updatedContract.status !== "active" || updatedContract.clientAction !== "none") {

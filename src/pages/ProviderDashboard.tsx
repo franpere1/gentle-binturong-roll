@@ -289,9 +289,11 @@ const ProviderDashboard: React.FC = () => {
                 
                 // Provider can cancel if:
                 // 1. Contract is pending (before offer) and provider hasn't acted
-                // 2. Contract is active AND client has initiated cancellation AND provider hasn't acted
+                // 2. Contract is offered (after offer) and provider hasn't acted
+                // 3. Contract is active AND client has initiated cancellation AND provider hasn't acted
                 const canProviderCancel = 
                   (contract.status === "pending" && contract.providerAction === "none") ||
+                  (contract.status === "offered" && contract.providerAction === "none") ||
                   (contract.status === "active" && contract.clientDeposited && contract.clientAction === "cancel" && contract.providerAction === "none");
 
 
