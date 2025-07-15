@@ -36,8 +36,8 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
       showError("Por favor, selecciona una calificación.");
       return;
     }
-    if (comment.trim().split(" ").length > 20) {
-      showError("El comentario no debe exceder las 20 palabras.");
+    if (comment.trim().length > 30) { // Changed to character length
+      showError("El comentario no debe exceder los 30 caracteres."); // Updated message
       return;
     }
 
@@ -86,13 +86,13 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({
             </RadioGroup>
           </div>
           <div>
-            <Label htmlFor="feedback-comment" className="mb-2 block">Comentario (máx. 20 palabras):</Label>
+            <Label htmlFor="feedback-comment" className="mb-2 block">Comentario (máx. 30 caracteres):</Label>
             <Textarea
               id="feedback-comment"
               value={comment}
               onChange={(e) => setComment(e.target.value)}
-              maxLength={120} // Aproximadamente 20 palabras
-              placeholder="Escribe tu comentario aquí..."
+              maxLength={30} // Changed to 30 characters
+              placeholder="Escribe tu comentario aquí (máx. 30 caracteres)..." // Updated placeholder
             />
           </div>
         </div>
