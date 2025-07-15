@@ -14,6 +14,7 @@ import { useContracts } from "@/context/ContractContext";
 import { showError, showSuccess } from "@/utils/toast";
 import PaymentSimulationModal from "./PaymentSimulationModal";
 import { useNavigate } from "react-router-dom"; // Importar useNavigate
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"; // Import Avatar components
 
 interface ProviderContactModalProps {
   provider: Provider;
@@ -91,15 +92,23 @@ const ProviderContactModal: React.FC<ProviderContactModalProps> = ({
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
               <h3 className="text-lg font-semibold">Detalles del Proveedor</h3>
-              <p>
-                <span className="font-medium">Nombre:</span> {provider.name}
-              </p>
-              <p>
-                <span className="font-medium">Correo:</span> {provider.email}
-              </p>
-              <p>
-                <span className="font-medium">Estado:</span> {provider.state}
-              </p>
+              <div className="flex items-center space-x-3">
+                <Avatar className="w-16 h-16">
+                  <AvatarImage src={provider.profileImage} alt={`${provider.name}'s profile`} />
+                  <AvatarFallback>{provider.name.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <p>
+                    <span className="font-medium">Nombre:</span> {provider.name}
+                  </p>
+                  <p>
+                    <span className="font-medium">Correo:</span> {provider.email}
+                  </p>
+                  <p>
+                    <span className="font-medium">Estado:</span> {provider.state}
+                  </p>
+                </div>
+              </div>
             </div>
             <div className="space-y-2">
               <h3 className="text-lg font-semibold">Detalles del Servicio</h3>

@@ -108,12 +108,13 @@ const ClientRegistrationForm: React.FC = () => {
   const [email, setEmail] = useState("");
   const [state, setState] = useState("");
   const [password, setPassword] = useState("");
+  const [profileImage, setProfileImage] = useState(""); // Nuevo estado para la imagen de perfil
   const { registerClient } = useAuth();
   const navigate = useNavigate(); // Importar useNavigate
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const success = registerClient({ id: "", name, email, state, password, type: "client" });
+    const success = registerClient({ id: "", name, email, state, password, type: "client", profileImage }); // Incluir profileImage
     if (success) {
       navigate("/client-dashboard"); // Redirigir directamente
     }
@@ -157,6 +158,16 @@ const ClientRegistrationForm: React.FC = () => {
         </Select>
       </div>
       <div>
+        <Label htmlFor="client-profile-image">URL de Imagen de Perfil (opcional)</Label>
+        <Input
+          id="client-profile-image"
+          type="text"
+          value={profileImage}
+          onChange={(e) => setProfileImage(e.target.value)}
+          placeholder="Ej: https://ejemplo.com/mi-foto.jpg"
+        />
+      </div>
+      <div>
         <Label htmlFor="client-password">Contraseña</Label>
         <Input
           id="client-password"
@@ -183,6 +194,7 @@ const ProviderRegistrationForm: React.FC = () => {
   const [serviceImage, setServiceImage] = useState(""); // For demo, just a URL/text
   const [password, setPassword] = useState("");
   const [rate, setRate] = useState<number | ''>(''); // Nuevo estado para la tarifa
+  const [profileImage, setProfileImage] = useState(""); // Nuevo estado para la imagen de perfil
   const { registerProvider } = useAuth();
   const navigate = useNavigate(); // Importar useNavigate
 
@@ -223,6 +235,7 @@ const ProviderRegistrationForm: React.FC = () => {
       serviceDescription,
       serviceImage,
       rate: Number(rate), // Incluir la tarifa
+      profileImage, // Incluir profileImage
     });
     if (success) {
       navigate("/provider-dashboard"); // Redirigir directamente
@@ -323,6 +336,16 @@ const ProviderRegistrationForm: React.FC = () => {
           required
           min="0"
           step="0.01"
+        />
+      </div>
+      <div>
+        <Label htmlFor="provider-profile-image">URL de Imagen de Perfil (opcional)</Label>
+        <Input
+          id="provider-profile-image"
+          type="text"
+          value={profileImage}
+          onChange={(e) => setProfileImage(e.target.value)}
+          placeholder="Ej: https://ejemplo.com/mi-foto.jpg"
         />
       </div>
       <div>

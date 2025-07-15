@@ -29,6 +29,7 @@ const ClientProfileEditor: React.FC<ClientProfileEditorProps> = ({
   const [name, setName] = useState(client.name);
   const [email, setEmail] = useState(client.email);
   const [state, setState] = useState(client.state);
+  const [profileImage, setProfileImage] = useState(client.profileImage || ""); // Nuevo estado
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,6 +46,7 @@ const ClientProfileEditor: React.FC<ClientProfileEditorProps> = ({
       name,
       email,
       state,
+      profileImage, // Incluir profileImage
     };
 
     updateUser(updatedClient);
@@ -88,6 +90,16 @@ const ClientProfileEditor: React.FC<ClientProfileEditorProps> = ({
             ))}
           </SelectContent>
         </Select>
+      </div>
+      <div>
+        <Label htmlFor="edit-client-profile-image">URL de Imagen de Perfil (opcional)</Label>
+        <Input
+          id="edit-client-profile-image"
+          type="text"
+          value={profileImage}
+          onChange={(e) => setProfileImage(e.target.value)}
+          placeholder="Ej: https://ejemplo.com/mi-foto.jpg"
+        />
       </div>
       <div className="flex justify-end space-x-2 mt-6">
         <Button type="button" variant="outline" onClick={onCancel}>

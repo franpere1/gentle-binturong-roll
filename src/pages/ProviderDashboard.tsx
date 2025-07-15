@@ -24,6 +24,7 @@ import { Input } from "@/components/ui/input"; // Import Input for search bar
 import ProviderProfileEditor from "@/components/ProviderProfileEditor";
 import { Star } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"; // Import Avatar components
 
 const ProviderDashboard: React.FC = () => {
   const { currentUser, findUserById } = useAuth(); // Usar findUserById
@@ -102,8 +103,12 @@ const ProviderDashboard: React.FC = () => {
           </h1>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <div>
+            <div className="flex flex-col items-center md:items-start">
               <h2 className="text-2xl font-semibold mb-4">Tu Perfil</h2>
+              <Avatar className="w-24 h-24 mb-4">
+                <AvatarImage src={provider.profileImage} alt={`${provider.name}'s profile`} />
+                <AvatarFallback>{provider.name.charAt(0)}</AvatarFallback>
+              </Avatar>
               <p className="mb-2">
                 <span className="font-medium">Correo:</span> {provider.email}
               </p>

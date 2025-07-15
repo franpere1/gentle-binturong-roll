@@ -14,6 +14,7 @@ export interface User {
   state: string;
   password?: string; // Password will not be stored in plain text in a real app, but for demo, it's fine.
   createdAt: number; // Nuevo campo para la fecha de creación
+  profileImage?: string; // Nuevo campo para la URL de la imagen de perfil
 }
 
 export interface Client extends User {

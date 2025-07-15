@@ -43,6 +43,7 @@ const ProviderProfileEditor: React.FC<ProviderProfileEditorProps> = ({
   const [serviceDescription, setServiceDescription] = useState(provider.serviceDescription);
   const [serviceImage, setServiceImage] = useState(provider.serviceImage || "");
   const [rate, setRate] = useState<number | ''>(provider.rate);
+  const [profileImage, setProfileImage] = useState(provider.profileImage || ""); // Nuevo estado
 
   const serviceCategories: ServiceCategory[] = [
     "Plomería",
@@ -80,6 +81,7 @@ const ProviderProfileEditor: React.FC<ProviderProfileEditorProps> = ({
       serviceDescription,
       serviceImage,
       rate: Number(rate),
+      profileImage, // Incluir profileImage
     };
 
     updateUser(updatedProvider);
@@ -181,6 +183,16 @@ const ProviderProfileEditor: React.FC<ProviderProfileEditorProps> = ({
           required
           min="0"
           step="0.01"
+        />
+      </div>
+      <div>
+        <Label htmlFor="edit-profile-image">URL de Imagen de Perfil (opcional)</Label>
+        <Input
+          id="edit-profile-image"
+          type="text"
+          value={profileImage}
+          onChange={(e) => setProfileImage(e.target.value)}
+          placeholder="Ej: https://ejemplo.com/mi-foto.jpg"
         />
       </div>
       <div className="flex justify-end space-x-2 mt-6">

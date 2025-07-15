@@ -25,6 +25,7 @@ import ClientProfileEditor from "@/components/ClientProfileEditor";
 import ProviderContactModal from "@/components/ProviderContactModal";
 import ContractCompletionModal from "@/components/ContractCompletionModal";
 import FeedbackModal from "@/components/FeedbackModal";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"; // Import Avatar components
 
 const ClientDashboard: React.FC = () => {
   const { currentUser, getAllProviders } = useAuth();
@@ -137,8 +138,12 @@ const ClientDashboard: React.FC = () => {
           </h1>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <div>
+            <div className="flex flex-col items-center md:items-start">
               <h2 className="text-2xl font-semibold mb-4">Tu Perfil</h2>
+              <Avatar className="w-24 h-24 mb-4">
+                <AvatarImage src={client.profileImage} alt={`${client.name}'s profile`} />
+                <AvatarFallback>{client.name.charAt(0)}</AvatarFallback>
+              </Avatar>
               <p className="mb-2">
                 <span className="font-medium">Correo:</span> {client.email}
               </p>
@@ -146,7 +151,7 @@ const ClientDashboard: React.FC = () => {
                 <span className="font-medium">Estado:</span> {client.state}
               </p>
             </div>
-            <div className="flex items-center justify-center">
+            <div className="flex items-center justify-center md:justify-end">
               <Dialog open={isEditing} onOpenChange={setIsEditing}>
                 <DialogTrigger asChild>
                   <Button variant="default">Editar Información</Button>
@@ -275,7 +280,13 @@ const ClientDashboard: React.FC = () => {
                     />
                   )}
                   <CardHeader>
-                    <CardTitle>{provider.serviceTitle}</CardTitle>
+                    <div className="flex items-center space-x-3 mb-2">
+                      <Avatar className="w-10 h-10">
+                        <AvatarImage src={provider.profileImage} alt={`${provider.name}'s profile`} />
+                        <AvatarFallback>{provider.name.charAt(0)}</AvatarFallback>
+                      </Avatar>
+                      <CardTitle>{provider.serviceTitle}</CardTitle>
+                    </div>
                     <CardDescription className="text-gray-600 dark:text-gray-400">
                       {provider.serviceDescription}
                     </CardDescription>
