@@ -30,6 +30,7 @@ const ContractCompletionModal: React.FC<ContractCompletionModalProps> = ({
   const { handleContractAction } = useContracts();
 
   const handleConfirmCompletion = () => {
+    console.log("ContractCompletionModal: 'Confirmar y Liberar Fondos' button clicked for contract:", contract.id);
     if (currentUser) {
       handleContractAction(contract.id, currentUser.id, 'finalize');
       // La lógica de feedback se manejará en el dashboard después de que el estado del contrato se actualice a 'finalized'

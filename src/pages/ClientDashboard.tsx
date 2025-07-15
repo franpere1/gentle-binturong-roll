@@ -133,8 +133,10 @@ const ClientDashboard: React.FC = () => {
   };
 
   const handleFinalizeContractClick = (contract: Contract) => {
+    console.log("ClientDashboard: 'Finalizar Contrato' button clicked for contract:", contract.id);
     setContractToFinalize(contract);
-    setIsCompletionModalOpen(true);
+    setIsCompletionModal(true);
+    console.log("ClientDashboard: isCompletionModalOpen set to true. contractToFinalize:", contract.id);
   };
 
   const handleCancelContract = (contractId: string) => {
@@ -282,11 +284,7 @@ const ClientDashboard: React.FC = () => {
                     } else if (contract.providerAction === "cancel" && contract.clientAction === "none") {
                       statusText = "Cancelación iniciada por proveedor (Esperando tu acción)";
                       statusColorClass = "text-red-600";
-                    } else if (contract.clientAction === "dispute") {
-                      statusText = "En Disputa (Iniciada por ti)";
-                      statusColorClass = "text-orange-600";
-                    }
-                    else {
+                    } else {
                       statusText = "Activo"; // Fallback for other active states
                       statusColorClass = "text-blue-600";
                     }
@@ -437,17 +435,13 @@ const ClientDashboard: React.FC = () => {
           )}
         </div>
       </div>
-      {selectedProvider && (
-        <ProviderContactModal
-          provider={selectedProvider}
-          isOpen={isContactModalOpen}
-          onClose={() => setIsContactModalOpen(false)}
-        />
-      )}
       {isCompletionModalOpen && contractToFinalize && (
         <ContractCompletionModal
           isOpen={isCompletionModalOpen}
-          onClose={() => setIsCompletionModal(false)}
+          onClose={() => {
+            console.log("ClientDashboard: ContractCompletionModal closed.");
+            setIsCompletionModal(false);
+          }}
           contract={contractToFinalize}
           providerName={allProviders.find(p => p.id === contractToFinalize.providerId)?.name || "Desconocido"}
         />
