@@ -10,8 +10,9 @@ interface ContractContextType {
     clientId: string,
     providerId: string,
     serviceTitle: string,
-    serviceRate: number
+    serviceRate: number // This will be the initial suggested rate
   ) => Contract | null;
+  makeOffer: (contractId: string, newRate: number) => void; // New function for provider to make an offer
   depositFunds: (contractId: string) => boolean;
   handleContractAction: (contractId: string, actorId: string, actionType: 'finalize' | 'cancel' | 'dispute') => void; // Nueva función
   resolveDispute: (contractId: string, resolutionType: 'toClient' | 'toProvider') => void; // Nueva función para admin
@@ -54,7 +55,7 @@ export const ContractProvider: React.FC<ContractProviderProps> = ({ children }) 
       (contract) =>
         contract.clientId === clientId &&
         contract.providerId === providerId &&
-        (contract.status === "pending" || contract.status === "active")
+        (contract.status === "pending" || contract.status === "offered" || contract.status === "active")
     );
   };
 
@@ -75,7 +76,7 @@ export const ContractProvider: React.FC<ContractProviderProps> = ({ children }) 
     clientId: string,
     providerId: string,
     serviceTitle: string,
-    serviceRate: number
+    serviceRate: number // This is the initial suggested rate from provider's profile
   ): Contract | null => {
     if (!currentUser || currentUser.id !== clientId) {
       showError("Solo el cliente puede crear un contrato.");
@@ -91,30 +92,55 @@ export const ContractProvider: React.FC<ContractProviderProps> = ({ children }) 
       clientId,
       providerId,
       serviceTitle,
-      serviceRate,
-      status: "pending",
+      serviceRate, // Initial suggested rate
+      status: "pending", // New initial status: waiting for provider's offer
       clientDeposited: false,
-      clientAction: "none", // Inicializar
-      providerAction: "none", // Inicializar
+      clientAction: "none",
+      providerAction: "none",
       commissionRate: 0.10, // 10% de comisión
       createdAt: Date.now(),
       updatedAt: Date.now(),
-      disputeResolution: undefined, // Inicializar como undefined
+      disputeResolution: undefined,
     };
 
     setContracts((prev) => [...prev, newContract]);
-    showSuccess("Contrato creado con éxito. Por favor, deposita los fondos.");
+    showSuccess("Contrato creado con éxito. El proveedor ha sido notificado para hacer una oferta.");
     return newContract;
+  };
+
+  const makeOffer = (contractId: string, newRate: number) => {
+    setContracts((prev) =>
+      prev.map((contract) => {
+        if (contract.id === contractId && contract.status === "pending" && contract.providerId === currentUser?.id) {
+          showSuccess(`Oferta de $${newRate.toFixed(2)} USD enviada para el servicio "${contract.serviceTitle}".`);
+          return {
+            ...contract,
+            serviceRate: newRate,
+            status: "offered", // New status: provider has made an offer
+            providerAction: "make_offer",
+            updatedAt: Date.now(),
+          };
+        }
+        return contract;
+      })
+    );
   };
 
   const depositFunds = (contractId: string): boolean => {
     let success = false;
     setContracts((prev) =>
       prev.map((contract) => {
-        if (contract.id === contractId && contract.status === "pending" && !contract.clientDeposited) {
+        // Funds can only be deposited if the contract is in 'offered' status and client hasn't deposited yet
+        if (contract.id === contractId && contract.status === "offered" && !contract.clientDeposited) {
           success = true;
           showSuccess(`Fondos depositados para el servicio "${contract.serviceTitle}". El proveedor ha sido notificado.`);
-          return { ...contract, clientDeposited: true, status: "active", updatedAt: Date.now() };
+          return {
+            ...contract,
+            clientDeposited: true,
+            status: "active", // Now it's active
+            clientAction: "accept_offer", // Client accepted the offer by depositing
+            updatedAt: Date.now()
+          };
         }
         return contract;
       })
@@ -141,12 +167,12 @@ export const ContractProvider: React.FC<ContractProviderProps> = ({ children }) 
           return contract;
         }
 
-        // Handle dispute action first
+        // Handle dispute action first (only client can initiate, and only if active and no prior action)
         if (actionType === 'dispute') {
           if (actorId === contract.clientId) {
-            if (updatedContract.clientAction === "dispute") {
-              showError("Ya has iniciado una disputa para este contrato.");
-              console.log("ContractContext: Client already initiated dispute, returning original.");
+            if (updatedContract.status !== "active" || updatedContract.clientAction !== "none") {
+              showError("Solo puedes iniciar una disputa en un contrato activo y si no has tomado otra acción.");
+              console.log("ContractContext: Client tried to dispute in invalid state, returning original.");
               return contract;
             }
             updatedContract.clientAction = "dispute";
@@ -165,7 +191,7 @@ export const ContractProvider: React.FC<ContractProviderProps> = ({ children }) 
         // If not a dispute, proceed with finalize/cancel logic
         // 1. Record the action of the current actor
         if (actorId === contract.clientId) {
-          if (updatedContract.clientAction !== "none") {
+          if (updatedContract.clientAction !== "none" && updatedContract.clientAction !== "accept_offer") { // Allow client to finalize/cancel after accepting offer
             showError("Ya has realizado una acción en este contrato.");
             console.log("ContractContext: Client already took action, returning original.");
             return contract;
@@ -173,7 +199,7 @@ export const ContractProvider: React.FC<ContractProviderProps> = ({ children }) 
           updatedContract.clientAction = actionType;
           console.log(`ContractContext: Client action recorded: ${actionType}`);
         } else if (actorId === contract.providerId) {
-          if (updatedContract.providerAction !== "none") {
+          if (updatedContract.providerAction !== "none" && updatedContract.providerAction !== "make_offer") { // Allow provider to finalize/cancel after making offer
             showError("Ya has realizado una acción en este contrato.");
             console.log("ContractContext: Provider already took action, returning original.");
             return contract;
@@ -218,12 +244,11 @@ export const ContractProvider: React.FC<ContractProviderProps> = ({ children }) 
         } else {
           // If client has deposited funds and contract is still pending, it becomes active.
           // Otherwise, the status remains as is, and we just show a message about the action being recorded.
-          if (clientDeposited && updatedContract.status === "pending") {
-              updatedContract.status = "active";
-              console.log("ContractContext: Contract status changed from pending to active due to client deposit.");
+          // The 'offered' status is handled by depositFunds.
+          if (updatedContract.status === "active") { // Only show this message if already active
+            showSuccess(`Tu acción de ${actionType === 'finalize' ? 'finalizar' : 'cancelar'} el contrato "${updatedContract.serviceTitle}" ha sido registrada. Esperando la acción de la otra parte.`);
+            console.log("ContractContext: Action recorded, waiting for other party.");
           }
-          showSuccess(`Tu acción de ${actionType === 'finalize' ? 'finalizar' : 'cancelar'} el contrato "${updatedContract.serviceTitle}" ha sido registrada. Esperando la acción de la otra parte.`);
-          console.log("ContractContext: Action recorded, waiting for other party.");
         }
         console.log(`ContractContext: After update - Contract ID: ${updatedContract.id}, Client Action: ${updatedContract.clientAction}, Provider Action: ${updatedContract.providerAction}, Status: ${updatedContract.status}`);
         return updatedContract;
@@ -264,6 +289,7 @@ export const ContractProvider: React.FC<ContractProviderProps> = ({ children }) 
       value={{
         contracts,
         createContract,
+        makeOffer, // Add new function to context
         depositFunds,
         handleContractAction,
         resolveDispute, // Añadir la nueva función al contexto

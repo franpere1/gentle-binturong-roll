@@ -100,11 +100,11 @@ export interface Contract {
   clientId: string;
   providerId: string;
   serviceTitle: string; // Título del servicio contratado
-  serviceRate: number;  // Tarifa del servicio contratado
-  status: "pending" | "active" | "finalized" | "cancelled" | "disputed" | "finalized_by_dispute"; // Añadido 'disputed' y 'finalized_by_dispute'
+  serviceRate: number;  // Tarifa del servicio contratado (puede ser la sugerida o la ofertada)
+  status: "pending" | "offered" | "active" | "finalized" | "cancelled" | "disputed" | "finalized_by_dispute"; // Añadido 'offered'
   clientDeposited: boolean;
-  clientAction: "none" | "cancel" | "finalize" | "dispute"; // Nuevo: Acción tomada por el cliente
-  providerAction: "none" | "cancel" | "finalize"; // Nuevo: Acción tomada por el proveedor
+  clientAction: "none" | "cancel" | "finalize" | "dispute" | "accept_offer"; // Nuevo: Acción tomada por el cliente
+  providerAction: "none" | "cancel" | "finalize" | "make_offer"; // Nuevo: Acción tomada por el proveedor
   commissionRate: number; // e.g., 0.10 for 10%
   createdAt: number;
   updatedAt: number;

@@ -12,9 +12,9 @@ import ChatWindow from "./ChatWindow";
 import { useAuth } from "@/context/AuthContext";
 import { useContracts } from "@/context/ContractContext";
 import { showError, showSuccess } from "@/utils/toast";
-import PaymentSimulationModal from "./PaymentSimulationModal";
-import { useNavigate } from "react-router-dom"; // Importar useNavigate
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"; // Import Avatar components
+import PaymentSimulationModal from "./PaymentSimulationModal"; // Keep import for potential future use or if other parts still use it
+import { useNavigate } from "react-router-dom";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface ProviderContactModalProps {
   provider: Provider;
@@ -28,14 +28,13 @@ const ProviderContactModal: React.FC<ProviderContactModalProps> = ({
   onClose,
 }) => {
   const { currentUser } = useAuth();
-  const { createContract, depositFunds, hasActiveOrPendingContract } = useContracts();
-  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-  const navigate = useNavigate(); // Inicializar useNavigate
+  const { createContract, hasActiveOrPendingContract } = useContracts(); // Removed depositFunds
+  const navigate = useNavigate();
 
   const isClient = currentUser && currentUser.type === "client";
   const clientHasExistingContract = isClient && hasActiveOrPendingContract(currentUser.id, provider.id);
 
-  // Función para iniciar el proceso de contratación (abrir el modal de pago)
+  // Función para iniciar el proceso de contratación (crear contrato pendiente)
   const handleInitiateContractProcess = () => {
     if (!currentUser) {
       showError("Debes iniciar sesión como cliente para contratar un servicio.");
@@ -45,38 +44,20 @@ const ProviderContactModal: React.FC<ProviderContactModalProps> = ({
       showError("Solo los clientes pueden contratar servicios.");
       return;
     }
-    // Abre el modal de pago para permitir el ajuste del monto
-    setIsPaymentModalOpen(true);
-  };
-
-  // Función que se llama cuando el pago es confirmado en el modal de simulación
-  const handlePaymentConfirmed = (finalAmount: number) => {
-    if (!currentUser || currentUser.type !== "client") {
-      showError("Error: Usuario no autorizado para esta acción.");
-      return;
-    }
-
-    // Primero, crea el contrato con el monto final negociado
+    
+    // Create contract in 'pending' status, passing the provider's suggested rate
     const newContract = createContract(
       currentUser.id,
       provider.id,
       provider.serviceTitle,
-      finalAmount // Usa el monto final del modal
+      provider.rate || 0 // Pass the initial suggested rate
     );
 
     if (newContract) {
-      // Luego, deposita los fondos para el contrato recién creado
-      const depositSuccess = depositFunds(newContract.id);
-      if (depositSuccess) {
-        // El toast de éxito ya se muestra dentro de depositFunds
-        onClose(); // Cerrar el modal de contacto del proveedor
-        navigate("/client-dashboard"); // Redirigir al dashboard del cliente
-      } else {
-        showError("Error al depositar fondos. Inténtalo de nuevo.");
-      }
-    } else {
-      // createContract ya muestra un error si falla (ej. contrato existente)
+      onClose(); // Close the provider contact modal
+      navigate("/client-dashboard"); // Redirect to client dashboard to see the pending contract
     }
+    // createContract already shows an error if it fails (e.g., existing contract)
   };
 
   return (
@@ -152,16 +133,7 @@ const ProviderContactModal: React.FC<ProviderContactModalProps> = ({
           </div>
         </DialogContent>
       </Dialog>
-
-      {isPaymentModalOpen && (
-        <PaymentSimulationModal
-          isOpen={isPaymentModalOpen}
-          onClose={() => setIsPaymentModalOpen(false)}
-          serviceTitle={provider.serviceTitle}
-          initialAmount={provider.rate || 0} // Pasa la tarifa sugerida inicial, o 0 si es indefinida
-          onConfirm={handlePaymentConfirmed}
-        />
-      )}
+      {/* PaymentSimulationModal is no longer opened directly from here */}
     </>
   );
 };

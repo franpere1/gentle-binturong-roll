@@ -25,13 +25,16 @@ import ProviderProfileEditor from "@/components/ProviderProfileEditor";
 import { Star } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import MakeOfferModal from "@/components/MakeOfferModal"; // Import the new modal
 
 const ProviderDashboard: React.FC = () => {
   const { currentUser, findUserById } = useAuth();
-  const { getContractsForUser, handleContractAction, contracts } = useContracts(); // Añadir contracts del contexto
+  const { getContractsForUser, handleContractAction, makeOffer, contracts } = useContracts(); // Add makeOffer
   const provider = currentUser as Provider;
   const [isEditing, setIsEditing] = useState(false);
   const [searchTermContracts, setSearchTermContracts] = useState("");
+  const [isMakeOfferModalOpen, setIsMakeOfferModalOpen] = useState(false); // State for offer modal
+  const [contractToOffer, setContractToOffer] = useState<Contract | null>(null); // State to hold contract for offer
 
   const providerContracts = provider ? getContractsForUser(provider.id) : [];
 
@@ -47,32 +50,37 @@ const ProviderDashboard: React.FC = () => {
       );
     });
 
-    // Sort: active contracts first, then by creation date (most recent)
+    // Sort: pending contracts (waiting for offer) first, then offered (waiting for client acceptance),
+    // then active contracts (waiting for provider finalize), then by creation date (most recent)
     filteredContracts.sort((a, b) => {
-      // Prioritize contracts that are 'active' and waiting for provider action (client has finalized)
+      // 1. Prioritize 'pending' contracts (waiting for provider's offer)
+      if (a.status === "pending" && b.status !== "pending") return -1;
+      if (a.status !== "pending" && b.status === "pending") return 1;
+
+      // 2. Then prioritize 'offered' contracts (provider made offer, waiting for client to accept/deposit)
+      if (a.status === "offered" && b.status !== "offered") return -1;
+      if (a.status !== "offered" && b.status === "offered") return 1;
+
+      // 3. Then prioritize 'active' contracts where client has deposited and provider needs to finalize
       const aIsReadyForProviderFinalize = a.status === "active" && a.clientDeposited && a.clientAction === "finalize" && a.providerAction === "none";
       const bIsReadyForProviderFinalize = b.status === "active" && b.clientDeposited && b.clientAction === "finalize" && b.providerAction === "none";
 
       if (aIsReadyForProviderFinalize && !bIsReadyForProviderFinalize) return -1;
       if (!aIsReadyForProviderFinalize && bIsReadyForProviderFinalize) return 1;
 
-      // Then prioritize contracts that are 'active' and waiting for client action (provider has finalized)
+      // 4. Then prioritize 'active' contracts where provider has finalized and waiting for client
       const aIsProviderFinalizedWaitingClient = a.status === "active" && a.clientDeposited && a.providerAction === "finalize" && a.clientAction === "none";
       const bIsProviderFinalizedWaitingClient = b.status === "active" && b.clientDeposited && b.providerAction === "finalize" && b.clientAction === "none";
 
       if (aIsProviderFinalizedWaitingClient && !bIsProviderFinalizedWaitingClient) return -1;
       if (!aIsProviderFinalizedWaitingClient && bIsProviderFinalizedWaitingClient) return 1;
 
-      // Then prioritize 'active' contracts where no one has acted yet
-      const aIsPurelyActive = a.status === "active" && a.clientDeposited && a.clientAction === "none" && a.providerAction === "none";
-      const bIsPurelyActive = b.status === "active" && b.clientDeposited && b.clientAction === "none" && b.providerAction === "none";
+      // 5. Then prioritize 'active' contracts where no one has acted yet (after client deposit)
+      const aIsPurelyActive = a.status === "active" && a.clientDeposited && a.clientAction === "accept_offer" && a.providerAction === "none";
+      const bIsPurelyActive = b.status === "active" && b.clientDeposited && b.clientAction === "accept_offer" && b.providerAction === "none";
 
       if (aIsPurelyActive && !bIsPurelyActive) return -1;
       if (!aIsPurelyActive && bIsPurelyActive) return 1;
-
-      // Then prioritize 'pending' contracts
-      if (a.status === "pending" && b.status !== "pending") return -1;
-      if (a.status !== "pending" && b.status === "pending") return 1;
 
       // Then sort by creation date (most recent first)
       return b.createdAt - a.createdAt;
@@ -80,16 +88,13 @@ const ProviderDashboard: React.FC = () => {
 
     // Take only the last 3
     return filteredContracts.slice(0, 3);
-  }, [providerContracts, searchTermContracts, findUserById, contracts]); // Add 'contracts' to dependencies
+  }, [providerContracts, searchTermContracts, findUserById, contracts]);
 
   // Calculate accumulated earnings
   const accumulatedEarnings = providerContracts.reduce((total, contract) => {
-    if (contract.status === "finalized" || contract.status === "finalized_by_dispute") { // Include finalized_by_dispute
+    if (contract.status === "finalized" || contract.status === "finalized_by_dispute") {
       // If finalized by dispute to provider, add the amount minus commission
-      if (contract.status === "finalized_by_dispute" && contract.clientAction !== "dispute") { // Assuming client dispute means funds to client
-        // This logic needs to be more robust if admin can choose who gets funds.
-        // For now, if it's finalized_by_dispute, we assume provider gets funds minus commission.
-        // A more precise implementation would store who received funds in the contract.
+      if (contract.status === "finalized_by_dispute" && contract.disputeResolution === "toProvider") {
         return total + (contract.serviceRate * (1 - contract.commissionRate));
       } else if (contract.status === "finalized") {
         return total + (contract.serviceRate * (1 - contract.commissionRate));
@@ -108,6 +113,17 @@ const ProviderDashboard: React.FC = () => {
     if (currentUser) {
       handleContractAction(contractId, currentUser.id, 'cancel');
     }
+  };
+
+  const handleMakeOfferClick = (contract: Contract) => {
+    setContractToOffer(contract);
+    setIsMakeOfferModalOpen(true);
+  };
+
+  const handleConfirmOffer = (contractId: string, newRate: number) => {
+    makeOffer(contractId, newRate);
+    setIsMakeOfferModalOpen(false);
+    setContractToOffer(null);
   };
 
   if (!provider) {
@@ -258,27 +274,40 @@ const ProviderDashboard: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {displayedContracts.map((contract) => {
                 const clientUser = findUserById(contract.clientId);
-                const canProviderFinalize = contract.status === "active" && contract.clientDeposited && contract.providerAction === "none" && contract.clientAction !== "cancel" && contract.clientAction !== "dispute";
-                const canProviderCancel = (contract.status === "pending" || contract.status === "active") && contract.providerAction === "none" && contract.clientAction !== "finalize" && contract.clientAction !== "dispute";
-                const providerHasActed = contract.providerAction !== "none";
+                
+                // Provider can make an offer if contract is pending and no offer has been made
+                const canProviderMakeOffer = contract.status === "pending" && contract.providerAction === "none";
+                
+                // Provider can finalize if contract is active, client has deposited, and client has finalized
+                const canProviderFinalize = contract.status === "active" && contract.clientDeposited && contract.clientAction === "finalize" && contract.providerAction === "none";
+                
+                // Provider can cancel if contract is pending or active, and provider hasn't acted yet (or only made offer)
+                const canProviderCancel = 
+                  (contract.status === "pending" && contract.providerAction === "none") ||
+                  (contract.status === "offered" && contract.providerAction === "make_offer" && contract.clientAction === "none") ||
+                  (contract.status === "active" && contract.providerAction === "none" && contract.clientAction === "accept_offer");
 
                 let statusText = "";
                 let statusColorClass = "";
 
                 switch (contract.status) {
                   case "pending":
-                    statusText = "Pendiente de pago del cliente";
+                    statusText = "Pendiente (Esperando tu oferta)";
                     statusColorClass = "text-yellow-600";
                     break;
+                  case "offered":
+                    statusText = "Ofertado (Esperando aceptación del cliente)";
+                    statusColorClass = "text-purple-600";
+                    break;
                   case "active":
-                    if (contract.clientDeposited && contract.clientAction === "none" && contract.providerAction === "none") {
-                      statusText = "Activo (Esperando tu acción)"; // Specific status for provider's initial action
+                    if (contract.clientDeposited && contract.clientAction === "finalize" && contract.providerAction === "none") {
+                      statusText = "Activo (Cliente finalizó, esperando tu confirmación)";
+                      statusColorClass = "text-blue-600";
+                    } else if (contract.clientDeposited && contract.clientAction === "accept_offer" && contract.providerAction === "none") {
+                      statusText = "Activo (Cliente aceptó, esperando tu acción)";
                       statusColorClass = "text-blue-600";
                     } else if (contract.providerAction === "finalize" && contract.clientAction === "none") {
                       statusText = "Activo (Esperando confirmación del cliente)";
-                      statusColorClass = "text-blue-600";
-                    } else if (contract.clientAction === "finalize" && contract.providerAction === "none") {
-                      statusText = "Activo (Cliente finalizó, esperando tu confirmación)";
                       statusColorClass = "text-blue-600";
                     } else if (contract.providerAction === "cancel" && contract.clientAction === "none") {
                       statusText = "Cancelación iniciada (Esperando cliente)";
@@ -307,7 +336,7 @@ const ProviderDashboard: React.FC = () => {
                     statusText = "En Disputa (Fondos Retenidos)";
                     statusColorClass = "text-orange-600";
                     break;
-                  case "finalized_by_dispute": // New status
+                  case "finalized_by_dispute":
                     statusText = "Finalizado por Disputa (Admin)";
                     statusColorClass = "text-purple-600";
                     break;
@@ -343,13 +372,18 @@ const ProviderDashboard: React.FC = () => {
                       </p>
                       <p className="mb-1">
                         <span className="font-medium">Tu Acción:</span>{" "}
-                        {contract.providerAction === "none" ? "Pendiente" : contract.providerAction === "finalize" ? "Finalizar" : "Cancelar"}
+                        {contract.providerAction === "none" ? "Pendiente" : contract.providerAction === "make_offer" ? "Oferta Enviada" : contract.providerAction === "finalize" ? "Finalizar" : "Cancelar"}
                       </p>
                       <p className="mb-1">
                         <span className="font-medium">Acción Cliente:</span>{" "}
-                        {contract.clientAction === "none" ? "Pendiente" : contract.clientAction === "finalize" ? "Finalizar" : contract.clientAction === "cancel" ? "Cancelar" : "Disputar"}
+                        {contract.clientAction === "none" ? "Pendiente" : contract.clientAction === "accept_offer" ? "Oferta Aceptada" : contract.clientAction === "finalize" ? "Finalizar" : contract.clientAction === "cancel" ? "Cancelar" : "Disputar"}
                       </p>
                       <div className="flex flex-col gap-2 mt-4">
+                        {canProviderMakeOffer && (
+                          <Button className="w-full" onClick={() => handleMakeOfferClick(contract)}>
+                            Hacer Oferta
+                          </Button>
+                        )}
                         {canProviderFinalize && (
                           <Button className="w-full" onClick={() => handleFinalizeService(contract.id)}>
                             Finalizar Contrato
@@ -360,9 +394,10 @@ const ProviderDashboard: React.FC = () => {
                             Cancelar Contrato
                           </Button>
                         )}
-                        {providerHasActed && contract.status === "active" && contract.clientAction !== "dispute" && (
+                        {/* Display message if provider has acted or is waiting for client to act first */}
+                        {!canProviderMakeOffer && !canProviderFinalize && !canProviderCancel && contract.status !== "finalized" && contract.status !== "cancelled" && contract.status !== "disputed" && contract.status !== "finalized_by_dispute" && (
                           <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
-                            Esperando acción de la otra parte.
+                            {contract.providerAction !== "none" ? "Esperando acción de la otra parte." : "Esperando acción del cliente."}
                           </p>
                         )}
                       </div>
@@ -374,6 +409,16 @@ const ProviderDashboard: React.FC = () => {
           )}
         </div>
       </div>
+      {contractToOffer && (
+        <MakeOfferModal
+          isOpen={isMakeOfferModalOpen}
+          onClose={() => setIsMakeOfferModalOpen(false)}
+          contractId={contractToOffer.id}
+          serviceTitle={contractToOffer.serviceTitle}
+          initialRate={contractToOffer.serviceRate}
+          onConfirmOffer={handleConfirmOffer}
+        />
+      )}
       <MadeWithDyad />
     </div>
   );
