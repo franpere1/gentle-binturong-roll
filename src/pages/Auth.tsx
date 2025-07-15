@@ -71,27 +71,13 @@ const Auth: React.FC = () => {
 const LoginForm: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const { login, findUserByEmail } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const user = await findUserByEmail(email);
-    if (user && user.password === password) {
-      login(user);
-      if (user.type === "client") {
-        navigate("/client-dashboard");
-      } else if (user.type === "provider") {
-        navigate("/provider-dashboard");
-      } else if (user.type === "admin") {
-        navigate("/admin-dashboard");
-      } else {
-        showError("Tipo de usuario desconocido. Redirigiendo a la página principal.");
-        navigate("/");
-      }
-    } else {
-      showError("Credenciales incorrectas.");
-    }
+    await login(email, password);
+    // Navigation is now handled by AuthContext's onAuthStateChange and Index.tsx
   };
 
   return (
@@ -151,9 +137,9 @@ const ClientRegistrationForm: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const success = await registerClient({ id: "", name, email, state, phone, password, type: "client", profileImage });
+    const success = await registerClient({ name, email, state, phone, password, profileImage });
     if (success) {
-      navigate("/client-dashboard");
+      navigate("/client-dashboard"); // Navigate after successful registration and login
     }
   };
 
@@ -318,7 +304,6 @@ const ProviderRegistrationForm: React.FC = () => {
       showError("Por favor, selecciona una categoría de servicio.");
       return;
     }
-    // MODIFICACIÓN: Cambiado de conteo de palabras a conteo de caracteres
     if (serviceDescription.length > 50) {
       showError("La descripción breve no debe exceder los 50 caracteres.");
       return;
@@ -329,22 +314,20 @@ const ProviderRegistrationForm: React.FC = () => {
     }
 
     const success = await registerProvider({
-      id: "",
       name,
       email,
       state,
+      phone,
       password,
-      type: "provider",
       category: category as ServiceCategory,
       serviceTitle,
       serviceDescription,
       serviceImage,
       rate: Number(rate),
       profileImage,
-      phone,
     });
     if (success) {
-      navigate("/provider-dashboard");
+      navigate("/provider-dashboard"); // Navigate after successful registration and login
     }
   };
 

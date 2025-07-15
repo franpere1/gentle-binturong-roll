@@ -156,7 +156,6 @@ const ProviderProfileEditor: React.FC<ProviderProfileEditorProps> = ({
       showError("Por favor, selecciona una categoría de servicio.");
       return;
     }
-    // MODIFICACIÓN: Cambiado de conteo de palabras a conteo de caracteres
     if (serviceDescription.length > 50) {
       showError("La descripción breve no debe exceder los 50 caracteres.");
       return;
@@ -169,7 +168,7 @@ const ProviderProfileEditor: React.FC<ProviderProfileEditorProps> = ({
     const updatedProvider: Provider = {
       ...provider,
       name,
-      email,
+      email, // Email update should ideally go through Supabase Auth
       state,
       phone,
       category: category as ServiceCategory,
@@ -204,7 +203,7 @@ const ProviderProfileEditor: React.FC<ProviderProfileEditorProps> = ({
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
-          disabled
+          disabled // Email changes should be handled via Supabase Auth settings
         />
       </div>
       <div>

@@ -76,6 +76,8 @@ import React, { useState, useEffect } from "react";
       const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
+        // Supabase Auth handles email uniqueness for auth.users table.
+        // We still check public.users to ensure profile data consistency.
         const existingUser = await findUserByEmail(email);
         if (existingUser && existingUser.id !== client.id) {
           showError("Este correo electrónico ya está en uso por otra cuenta.");
@@ -85,7 +87,7 @@ import React, { useState, useEffect } from "react";
         const updatedClient: Client = {
           ...client,
           name,
-          email,
+          email, // Email update should ideally go through Supabase Auth
           state,
           phone,
           profileImage,
@@ -115,7 +117,7 @@ import React, { useState, useEffect } from "react";
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              disabled
+              disabled // Email changes should be handled via Supabase Auth settings
             />
           </div>
           <div>

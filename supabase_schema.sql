@@ -1,9 +1,14 @@
--- Create the 'users' table
+-- Drop existing tables if they exist to recreate with new schema
+-- Use CASCADE to drop dependent objects (like foreign keys)
+DROP TABLE IF EXISTS public.messages CASCADE;
+DROP TABLE IF EXISTS public.contracts CASCADE;
+DROP TABLE IF EXISTS public.users CASCADE;
+
+-- Create the 'users' table, linked to Supabase Auth
 CREATE TABLE public.users (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    id uuid PRIMARY KEY REFERENCES auth.users(id), -- Link to Supabase Auth user ID
     name text NOT NULL,
-    email text NOT NULL UNIQUE,
-    password text NOT NULL, -- In a real app, store hashed passwords, not plain text
+    email text NOT NULL UNIQUE, -- Email will also be managed by Supabase Auth
     state text NOT NULL,
     type text NOT NULL, -- 'client', 'provider', 'admin'
     created_at bigint NOT NULL,
@@ -34,7 +39,7 @@ ON public.users FOR UPDATE
 TO authenticated
 USING (auth.uid() = id);
 
--- Allow users to insert their own profile (during registration)
+-- Allow users to insert their own profile (after Supabase Auth signup)
 CREATE POLICY "Allow users to insert their own profile"
 ON public.users FOR INSERT
 TO authenticated
@@ -113,7 +118,7 @@ ON public.contracts FOR SELECT
 TO authenticated
 USING (auth.uid() = client_id OR auth.uid() = provider_id);
 
--- Allow clients/providers to update their own contracts (status, actions, rate)
+-- Allow clients/providers to update their contracts (status, actions, rate)
 CREATE POLICY "Allow clients/providers to update their contracts"
 ON public.contracts FOR UPDATE
 TO authenticated
@@ -132,8 +137,3 @@ ON public.contracts FOR DELETE
 AS PERMISSIVE
 TO authenticated
 USING (EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND type = 'admin'));
-
--- Optional: Add a default admin user if not already present
-INSERT INTO public.users (id, name, email, password, state, type, created_at)
-VALUES ('00000000-0000-0000-0000-000000000001', 'Admin', 'admin@admin.com', 'kilmanjaro', 'Distrito Capital', 'admin', EXTRACT(EPOCH FROM NOW()) * 1000)
-ON CONFLICT (email) DO NOTHING;
