@@ -29,7 +29,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const ClientDashboard: React.FC = () => {
   const { currentUser, getAllProviders } = useAuth();
-  const { getContractsForUser, handleContractAction, contracts } = useContracts(); // Añadir contracts del contexto
+  const { getContractsForUser, handleContractAction, contracts } = useContracts();
   const client = currentUser as Client;
   const [isEditing, setIsEditing] = useState(false);
   const [searchTermProviders, setSearchTermProviders] = useState("");
@@ -229,7 +229,7 @@ const ClientDashboard: React.FC = () => {
                 const provider = allProviders.find(p => p.id === contract.providerId);
                 
                 // Client can finalize ONLY if provider has finalized and client hasn't acted
-                const canClientFinalize = contract.status === "active" && contract.clientDeposited && contract.providerAction === "finalize" && contract.clientAction === "none";
+                const canClientFinalize = contract.providerAction === "finalize" && contract.clientAction === "none";
                 
                 // Client can cancel if:
                 // 1. Contract is pending (before deposit) and client hasn't acted
@@ -237,8 +237,6 @@ const ClientDashboard: React.FC = () => {
                 const canClientCancel = 
                   (contract.status === "pending" && contract.clientAction === "none") ||
                   (contract.status === "active" && contract.providerAction === "cancel" && contract.clientAction === "none");
-
-                const clientHasActed = contract.clientAction !== "none";
 
                 let statusText = "";
                 let statusColorClass = "";
@@ -416,7 +414,7 @@ const ClientDashboard: React.FC = () => {
           onClose={() => setIsCompletionModal(false)}
           contract={contractToFinalize}
           providerName={allProviders.find(p => p.id === contractToFinalize.providerId)?.name || "Desconocido"}
-          onFeedbackProvided={handleFeedbackProvided}
+          // onFeedbackProvided prop removed as it's handled by useEffect
         />
       )}
       {isFeedbackModalOpen && feedbackData && (

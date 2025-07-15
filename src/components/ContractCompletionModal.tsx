@@ -16,7 +16,7 @@ interface ContractCompletionModalProps {
   onClose: () => void;
   contract: Contract;
   providerName: string;
-  onFeedbackProvided: (contract: Contract, providerName: string) => void;
+  // onFeedbackProvided: (contract: Contract, providerName: string) => void; // Removed
 }
 
 const ContractCompletionModal: React.FC<ContractCompletionModalProps> = ({
@@ -24,7 +24,7 @@ const ContractCompletionModal: React.FC<ContractCompletionModalProps> = ({
   onClose,
   contract,
   providerName,
-  onFeedbackProvided,
+  // onFeedbackProvided, // Removed
 }) => {
   const { currentUser } = useAuth();
   const { handleContractAction } = useContracts();
