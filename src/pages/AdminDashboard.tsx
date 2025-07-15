@@ -186,7 +186,7 @@ const AdminDashboard: React.FC = () => {
           {displayedDisputedContracts.length < sortedDisputedContracts.length && (
             <div className="text-center mt-6">
               <Button onClick={handleLoadMoreActiveDisputes} variant="outline">
-                Cargar más disputas activas ({sortedDisputedContracts.length - displayedDisputedContracts.length} restantes)
+                Cargar más disputas ({sortedDisputedContracts.length - displayedDisputedContracts.length} restantes)
               </Button>
             </div>
           )}
@@ -244,7 +244,7 @@ const AdminDashboard: React.FC = () => {
           {displayedResolvedDisputes.length < sortedResolvedDisputes.length && (
             <div className="text-center mt-6">
               <Button onClick={handleLoadMoreResolvedDisputes} variant="outline">
-                Cargar más disputas resueltas ({sortedResolvedDisputes.length - displayedResolvedDisputes.length} restantes)
+                Cargar más disputas ({sortedResolvedDisputes.length - displayedResolvedDisputes.length} restantes)
               </Button>
             </div>
           )}
