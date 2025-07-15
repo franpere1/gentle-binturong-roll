@@ -11,8 +11,8 @@ import { Button } from "@/components/ui/button";
 import ChatWindow from "./ChatWindow";
 import { useAuth } from "@/context/AuthContext";
 import { useContracts } from "@/context/ContractContext";
-import { showError } from "@/utils/toast";
-import PaymentSimulationModal from "./PaymentSimulationModal"; // Importar el nuevo modal de pago
+import { showError, showSuccess } from "@/utils/toast";
+import PaymentSimulationModal from "./PaymentSimulationModal";
 
 interface ProviderContactModalProps {
   provider: Provider;
@@ -26,18 +26,14 @@ const ProviderContactModal: React.FC<ProviderContactModalProps> = ({
   onClose,
 }) => {
   const { currentUser } = useAuth();
-  const { createContract, depositFunds, hasActiveOrPendingContract, getLatestContractBetweenUsers } = useContracts();
-  const [contractCreated, setContractCreated] = useState(false);
-  const [currentContractId, setCurrentContractId] = useState<string | null>(null);
+  const { createContract, depositFunds, hasActiveOrPendingContract } = useContracts();
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-  // Eliminamos los estados chatDisabled y chatDisabledMessage ya que el chat siempre estará disponible.
 
   const isClient = currentUser && currentUser.type === "client";
   const clientHasExistingContract = isClient && hasActiveOrPendingContract(currentUser.id, provider.id);
 
-  // Eliminamos el useEffect que controlaba el estado de chatDisabled.
-
-  const handleContractService = () => {
+  // Función para iniciar el proceso de contratación (abrir el modal de pago)
+  const handleInitiateContractProcess = () => {
     if (!currentUser) {
       showError("Debes iniciar sesión como cliente para contratar un servicio.");
       return;
@@ -46,25 +42,35 @@ const ProviderContactModal: React.FC<ProviderContactModalProps> = ({
       showError("Solo los clientes pueden contratar servicios.");
       return;
     }
+    // Abre el modal de pago para permitir el ajuste del monto
+    setIsPaymentModalOpen(true);
+  };
 
+  // Función que se llama cuando el pago es confirmado en el modal de simulación
+  const handlePaymentConfirmed = (finalAmount: number) => {
+    if (!currentUser || currentUser.type !== "client") {
+      showError("Error: Usuario no autorizado para esta acción.");
+      return;
+    }
+
+    // Primero, crea el contrato con el monto final negociado
     const newContract = createContract(
       currentUser.id,
       provider.id,
       provider.serviceTitle,
-      provider.rate
+      finalAmount // Usa el monto final del modal
     );
 
     if (newContract) {
-      setCurrentContractId(newContract.id);
-      setContractCreated(true);
-      setIsPaymentModalOpen(true);
-    }
-  };
-
-  const handlePaymentConfirmed = () => {
-    if (currentContractId) {
-      depositFunds(currentContractId);
-      onClose();
+      // Luego, deposita los fondos para el contrato recién creado
+      const depositSuccess = depositFunds(newContract.id);
+      if (depositSuccess) {
+        // El toast de éxito ya se muestra dentro de depositFunds
+      } else {
+        showError("Error al depositar fondos. Inténtalo de nuevo.");
+      }
+    } else {
+      // createContract ya muestra un error si falla (ej. contrato existente)
     }
   };
 
@@ -103,7 +109,7 @@ const ProviderContactModal: React.FC<ProviderContactModalProps> = ({
                 <span className="font-medium">Descripción:</span> {provider.serviceDescription}
               </p>
               <p>
-                <span className="font-medium">Tarifa:</span> ${provider.rate.toFixed(2)} USD
+                <span className="font-medium">Tarifa Sugerida:</span> ${provider.rate.toFixed(2)} USD
               </p>
               {provider.serviceImage && (
                 <div className="mt-2">
@@ -117,7 +123,6 @@ const ProviderContactModal: React.FC<ProviderContactModalProps> = ({
             </div>
             <div className="space-y-2">
               <h3 className="text-lg font-semibold">Chat con {provider.name}</h3>
-              {/* El ChatWindow siempre se renderizará, y su contenido dependerá del historial de mensajes */}
               <ChatWindow otherUser={provider} />
             </div>
             <div className="mt-4">
@@ -125,19 +130,10 @@ const ProviderContactModal: React.FC<ProviderContactModalProps> = ({
                 <p className="text-center text-red-500 dark:text-red-400 font-semibold">
                   Ya tienes un contrato pendiente o activo con este proveedor.
                 </p>
-              ) : !contractCreated ? (
-                <Button className="w-full" onClick={handleContractService} disabled={!isClient}>
+              ) : (
+                <Button className="w-full" onClick={handleInitiateContractProcess} disabled={!isClient}>
                   Contratar Servicio
                 </Button>
-              ) : (
-                <div className="text-center">
-                  <p className="mb-2 text-lg font-semibold text-blue-600 dark:text-blue-400">
-                    Contrato creado. Por favor, deposita los fondos.
-                  </p>
-                  <Button className="w-full" onClick={() => setIsPaymentModalOpen(true)}>
-                    Ir a Pasarela de Pago
-                  </Button>
-                </div>
               )}
             </div>
           </div>
@@ -149,7 +145,7 @@ const ProviderContactModal: React.FC<ProviderContactModalProps> = ({
           isOpen={isPaymentModalOpen}
           onClose={() => setIsPaymentModalOpen(false)}
           serviceTitle={provider.serviceTitle}
-          amount={provider.rate}
+          initialAmount={provider.rate} // Pasa la tarifa sugerida inicial
           onConfirm={handlePaymentConfirmed}
         />
       )}
