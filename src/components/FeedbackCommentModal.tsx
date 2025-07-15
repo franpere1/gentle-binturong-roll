@@ -42,7 +42,7 @@ const FeedbackCommentModal: React.FC<FeedbackCommentModalProps> = ({
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className="flex-grow p-4 border rounded-md mt-4">
-          <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words">
+          <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-all"> {/* Added break-all */}
             {comment}
           </p>
         </ScrollArea>

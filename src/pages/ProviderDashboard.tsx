@@ -221,7 +221,7 @@ const ProviderDashboard: React.FC = () => {
                             ? `${f.comment.substring(0, COMMENT_TRUNCATE_LENGTH)}...`
                             : f.comment;
                           return (
-                            <li key={index} className="break-words mb-2">
+                            <li key={index} className="break-all mb-2"> {/* Changed to break-all */}
                               <span className={`font-medium ${
                                 f.type === "positive" ? "text-green-600" :
                                 f.type === "negative" ? "text-red-600" : "text-gray-500"
