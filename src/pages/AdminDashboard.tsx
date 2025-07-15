@@ -38,13 +38,14 @@ const AdminDashboard: React.FC = () => {
           providerName.includes(lowerCaseSearchTerm)
         );
       });
+      // When there's a search term, sort all matching results
+      filtered.sort((a, b) => b.createdAt - a.createdAt);
+      return filtered; // Return all filtered results
+    } else {
+      // When no search term, return only the last 3
+      filtered.sort((a, b) => b.createdAt - a.createdAt);
+      return filtered.slice(0, 3);
     }
-
-    // Sort by creation date (most recent first)
-    filtered.sort((a, b) => b.createdAt - a.createdAt);
-
-    // Take only the last 3
-    return filtered.slice(0, 3);
   }, [contracts, searchTermDisputes, findUserById]); // Add searchTermDisputes to dependencies
 
   // Filter for resolved disputes
