@@ -246,15 +246,17 @@ const ClientDashboard: React.FC = () => {
 
                 // Client can dispute if:
                 // Contract is active (funds deposited), and client hasn't taken any action (finalize/cancel/dispute)
+                // AND the provider HAS taken an action (i.e., providerAction is not "none")
                 // and the contract is not already finalized, cancelled, or disputed.
                 const canClientDispute = 
                   contract.status === "active" && 
                   contract.clientDeposited && 
                   contract.clientAction === "none" &&
+                  contract.providerAction !== "none" && // Only allow dispute if provider has acted
                   contract.status !== "finalized" &&
                   contract.status !== "cancelled" &&
                   contract.status !== "disputed" &&
-                  contract.status !== "finalized_by_dispute"; // Added new status
+                  contract.status !== "finalized_by_dispute";
 
                 let statusText = "";
                 let statusColorClass = "";
@@ -265,7 +267,10 @@ const ClientDashboard: React.FC = () => {
                     statusColorClass = "text-yellow-600";
                     break;
                   case "active":
-                    if (contract.clientAction === "finalize" && contract.providerAction === "none") {
+                    if (contract.clientDeposited && contract.clientAction === "none" && contract.providerAction === "none") {
+                      statusText = "Activo (Esperando acción del proveedor)"; // Specific status for initial active state
+                      statusColorClass = "text-blue-600";
+                    } else if (contract.clientAction === "finalize" && contract.providerAction === "none") {
                       statusText = "Activo (Esperando confirmación del proveedor)";
                       statusColorClass = "text-blue-600";
                     } else if (contract.providerAction === "finalize" && contract.clientAction === "none") {
@@ -278,7 +283,7 @@ const ClientDashboard: React.FC = () => {
                       statusText = "Cancelación iniciada por proveedor (Esperando tu acción)";
                       statusColorClass = "text-red-600";
                     } else {
-                      statusText = "Activo";
+                      statusText = "Activo"; // Fallback for other active states
                       statusColorClass = "text-blue-600";
                     }
                     break;

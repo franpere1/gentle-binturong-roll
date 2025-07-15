@@ -271,7 +271,10 @@ const ProviderDashboard: React.FC = () => {
                     statusColorClass = "text-yellow-600";
                     break;
                   case "active":
-                    if (contract.providerAction === "finalize" && contract.clientAction === "none") {
+                    if (contract.clientDeposited && contract.clientAction === "none" && contract.providerAction === "none") {
+                      statusText = "Activo (Esperando tu acción)"; // Specific status for provider's initial action
+                      statusColorClass = "text-blue-600";
+                    } else if (contract.providerAction === "finalize" && contract.clientAction === "none") {
                       statusText = "Activo (Esperando confirmación del cliente)";
                       statusColorClass = "text-blue-600";
                     } else if (contract.clientAction === "finalize" && contract.providerAction === "none") {
@@ -288,7 +291,7 @@ const ProviderDashboard: React.FC = () => {
                       statusColorClass = "text-orange-600";
                     }
                     else {
-                      statusText = "Activo";
+                      statusText = "Activo"; // Fallback for other active states
                       statusColorClass = "text-blue-600";
                     }
                     break;
