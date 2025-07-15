@@ -227,8 +227,17 @@ const ClientDashboard: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {displayedContracts.map((contract) => {
                 const provider = allProviders.find(p => p.id === contract.providerId);
+                
+                // Client can finalize ONLY if provider has finalized and client hasn't acted
                 const canClientFinalize = contract.status === "active" && contract.clientDeposited && contract.providerAction === "finalize" && contract.clientAction === "none";
-                const canClientCancel = (contract.status === "pending" || contract.status === "active") && contract.clientAction === "none" && contract.providerAction !== "finalize";
+                
+                // Client can cancel if:
+                // 1. Contract is pending (before deposit) and client hasn't acted
+                // 2. Contract is active AND provider has initiated cancellation AND client hasn't acted
+                const canClientCancel = 
+                  (contract.status === "pending" && contract.clientAction === "none") ||
+                  (contract.status === "active" && contract.providerAction === "cancel" && contract.clientAction === "none");
+
                 const clientHasActed = contract.clientAction !== "none";
 
                 let statusText = "";
@@ -298,11 +307,11 @@ const ClientDashboard: React.FC = () => {
                       </p>
                       <p className="mb-1">
                         <span className="font-medium">Tu Acción:</span>{" "}
-                        {contract.clientAction === "none" ? "Ninguna" : contract.clientAction === "finalize" ? "Finalizar" : "Cancelar"}
+                        {contract.clientAction === "none" ? "Pendiente" : contract.clientAction === "finalize" ? "Finalizar" : "Cancelar"}
                       </p>
                       <p className="mb-1">
                         <span className="font-medium">Acción Proveedor:</span>{" "}
-                        {contract.providerAction === "none" ? "Ninguna" : contract.providerAction === "finalize" ? "Finalizar" : "Cancelar"}
+                        {contract.providerAction === "none" ? "Pendiente" : contract.providerAction === "finalize" ? "Finalizar" : "Cancelar"}
                       </p>
                       <div className="flex flex-col gap-2 mt-4">
                         {canClientFinalize && (
@@ -315,9 +324,10 @@ const ClientDashboard: React.FC = () => {
                             Cancelar Contrato
                           </Button>
                         )}
-                        {clientHasActed && contract.status === "active" && (
+                        {/* Display message if client has acted or is waiting for provider to act first */}
+                        {!canClientFinalize && !canClientCancel && contract.status !== "finalized" && contract.status !== "cancelled" && contract.status !== "disputed" && (
                           <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
-                            Esperando acción de la otra parte.
+                            {contract.clientAction !== "none" ? "Esperando acción de la otra parte." : "Esperando acción del proveedor."}
                           </p>
                         )}
                       </div>

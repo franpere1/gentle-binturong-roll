@@ -324,11 +324,11 @@ const ProviderDashboard: React.FC = () => {
                       </p>
                       <p className="mb-1">
                         <span className="font-medium">Tu Acción:</span>{" "}
-                        {contract.providerAction === "none" ? "Ninguna" : contract.providerAction === "finalize" ? "Finalizar" : "Cancelar"}
+                        {contract.providerAction === "none" ? "Pendiente" : contract.providerAction === "finalize" ? "Finalizar" : "Cancelar"}
                       </p>
                       <p className="mb-1">
                         <span className="font-medium">Acción Cliente:</span>{" "}
-                        {contract.clientAction === "none" ? "Ninguna" : contract.clientAction === "finalize" ? "Finalizar" : "Cancelar"}
+                        {contract.clientAction === "none" ? "Pendiente" : contract.clientAction === "finalize" ? "Finalizar" : "Cancelar"}
                       </p>
                       <div className="flex flex-col gap-2 mt-4">
                         {canProviderFinalize && (
