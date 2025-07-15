@@ -82,6 +82,20 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ otherUser, contractStatus }) =>
             return '[LINK OCULTO]';
           });
         }
+
+        // Rule 6: Mask specific keywords related to social media and contact info
+        const sensitiveKeywords = [
+          "instagram", "tiktok", "email", "telefono", "whatsapp", "facebook", "twitter",
+          "telegram", "discord", "linkedin", "gmail", "hotmail", "outlook", "yahoo",
+          "contacto", "celular", "movil", "número", "numero"
+        ];
+        const keywordRegex = new RegExp(`\\b(${sensitiveKeywords.join("|")})\\b`, 'gi');
+        if (keywordRegex.test(messageToSend)) {
+          messageToSend = messageToSend.replace(keywordRegex, () => {
+            masked = true;
+            return '[OCULTO]';
+          });
+        }
       }
 
       sendMessage(otherUser.id, messageToSend);
