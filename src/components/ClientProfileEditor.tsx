@@ -29,6 +29,7 @@ const ClientProfileEditor: React.FC<ClientProfileEditorProps> = ({
   const [name, setName] = useState(client.name);
   const [email, setEmail] = useState(client.email);
   const [state, setState] = useState(client.state);
+  const [phone, setPhone] = useState(client.phone || ""); // Estado para el teléfono
   const [profileImage, setProfileImage] = useState(client.profileImage || "");
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -76,6 +77,7 @@ const ClientProfileEditor: React.FC<ClientProfileEditorProps> = ({
       name,
       email,
       state,
+      phone, // Incluir el teléfono en la actualización
       profileImage,
     };
 
@@ -120,6 +122,17 @@ const ClientProfileEditor: React.FC<ClientProfileEditorProps> = ({
             ))}
           </SelectContent>
         </Select>
+      </div>
+      <div>
+        <Label htmlFor="edit-client-phone">Número de Teléfono</Label>
+        <Input
+          id="edit-client-phone"
+          type="tel"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          placeholder="Ej: 0412-1234567"
+          required
+        />
       </div>
       <div>
         <Label htmlFor="profile-image-upload">Subir Imagen de Perfil (máx. 1MB)</Label>

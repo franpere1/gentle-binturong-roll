@@ -122,6 +122,7 @@ const ClientRegistrationForm: React.FC = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [state, setState] = useState("");
+  const [phone, setPhone] = useState(""); // Nuevo estado para el teléfono
   const [password, setPassword] = useState("");
   const [profileImage, setProfileImage] = useState("");
   const { registerClient } = useAuth();
@@ -145,7 +146,7 @@ const ClientRegistrationForm: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const success = registerClient({ id: "", name, email, state, password, type: "client", profileImage });
+    const success = registerClient({ id: "", name, email, state, phone, password, type: "client", profileImage });
     if (success) {
       navigate("/client-dashboard");
     }
@@ -187,6 +188,17 @@ const ClientRegistrationForm: React.FC = () => {
             ))}
           </SelectContent>
         </Select>
+      </div>
+      <div>
+        <Label htmlFor="client-phone">Número de Teléfono</Label>
+        <Input
+          id="client-phone"
+          type="tel" // Use type="tel" for phone numbers
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          placeholder="Ej: 0412-1234567"
+          required
+        />
       </div>
       <div>
         <Label htmlFor="client-profile-image">Subir Imagen de Perfil (opcional, máx. 1MB)</Label>

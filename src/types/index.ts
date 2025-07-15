@@ -53,6 +53,7 @@ export interface User {
 
 export interface Client extends User {
   type: "client";
+  phone: string; // Nuevo campo para el número de teléfono
 }
 
 export enum FeedbackType {
