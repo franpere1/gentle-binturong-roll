@@ -26,7 +26,7 @@ import { Star } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 const ProviderDashboard: React.FC = () => {
-  const { currentUser, findUserByEmail } = useAuth(); // findUserByEmail para obtener el nombre del cliente
+  const { currentUser, findUserById } = useAuth(); // Usar findUserById
   const { getContractsForUser, finalizeContractByProvider } = useContracts();
   const provider = currentUser as Provider;
   const [isEditing, setIsEditing] = useState(false);
@@ -38,7 +38,7 @@ const ProviderDashboard: React.FC = () => {
   const displayedContracts = useMemo(() => {
     const lowerCaseSearchTerm = searchTermContracts.toLowerCase();
     let filteredContracts = providerContracts.filter(contract => {
-      const client = findUserByEmail(contract.clientId); // Asumiendo que el ID del cliente es el email para findUserByEmail
+      const client = findUserById(contract.clientId); // Usar findUserById
       const clientName = client ? client.name.toLowerCase() : "";
       return (
         contract.serviceTitle.toLowerCase().includes(lowerCaseSearchTerm) ||
@@ -61,7 +61,7 @@ const ProviderDashboard: React.FC = () => {
 
     // Take only the last 3
     return filteredContracts.slice(0, 3);
-  }, [providerContracts, searchTermContracts, findUserByEmail]);
+  }, [providerContracts, searchTermContracts, findUserById]);
 
 
   // Calculate accumulated earnings
@@ -219,13 +219,16 @@ const ProviderDashboard: React.FC = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {displayedContracts.map((contract) => {
-                const clientUser = findUserByEmail(contract.clientId); // Obtener el cliente por su ID
+                const clientUser = findUserById(contract.clientId); // Obtener el cliente por su ID
                 return (
                   <Card key={contract.id} className="flex flex-col">
                     <CardHeader>
                       <CardTitle>{contract.serviceTitle}</CardTitle>
                       <CardDescription>
                         <span className="font-medium">Cliente:</span> {clientUser ? clientUser.name : "Desconocido"}
+                      </CardDescription>
+                      <CardDescription>
+                        <span className="font-medium">Fecha:</span> {new Date(contract.createdAt).toLocaleDateString()}
                       </CardDescription>
                       <CardDescription>
                         Estado:{" "}

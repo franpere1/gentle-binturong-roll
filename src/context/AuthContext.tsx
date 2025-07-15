@@ -16,6 +16,7 @@ interface AuthContextType {
   registerClient: (client: Client) => boolean;
   registerProvider: (provider: Provider) => boolean;
   findUserByEmail: (email: string) => User | undefined;
+  findUserById: (id: string) => User | undefined; // Nueva función para buscar por ID
   updateUser: (user: User) => void;
   getAllProviders: () => Provider[];
   addFeedbackToProvider: (
@@ -65,6 +66,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const findUserByEmail = (email: string) => {
     return users.find((user) => user.email === email);
+  };
+
+  const findUserById = (id: string) => {
+    return users.find((user) => user.id === id);
   };
 
   const login = (user: User) => {
@@ -166,6 +171,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         registerClient,
         registerProvider,
         findUserByEmail,
+        findUserById, // Añadir la nueva función al contexto
         updateUser,
         getAllProviders,
         addFeedbackToProvider,
