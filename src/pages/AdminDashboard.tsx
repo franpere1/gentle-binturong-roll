@@ -35,13 +35,13 @@ const AdminDashboard: React.FC = () => {
   const displayedDisputedContracts = useMemo(() => {
     let filtered = allRelevantContracts.filter(contract => contract.status === "disputed");
     filtered.sort((a, b) => b.createdAt - a.createdAt); // Sort by creation date (most recent first)
-    return searchTermDisputes ? filtered : filtered.slice(0, 3); // Limit to 3 if no search term
+    return searchTermDisputes ? filtered : filtered.slice(0, 4); // Limit to 4 if no search term
   }, [allRelevantContracts, searchTermDisputes]);
 
   const displayedResolvedDisputes = useMemo(() => {
     let filtered = allRelevantContracts.filter(contract => contract.status === "finalized_by_dispute");
     filtered.sort((a, b) => b.updatedAt - a.updatedAt); // Sort by most recently updated
-    return searchTermDisputes ? filtered : filtered.slice(0, 3); // Limit to 3 if no search term
+    return searchTermDisputes ? filtered : filtered.slice(0, 4); // Limit to 4 if no search term
   }, [allRelevantContracts, searchTermDisputes]);
 
   const handleResolveToProvider = (contract: Contract) => {
