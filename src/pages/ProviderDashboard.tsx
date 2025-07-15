@@ -31,6 +31,14 @@ const ProviderDashboard: React.FC = () => {
 
   const providerContracts = provider ? getContractsForUser(provider.id) : [];
 
+  // Calculate accumulated earnings
+  const accumulatedEarnings = providerContracts.reduce((total, contract) => {
+    if (contract.status === "finalized") {
+      return total + (contract.serviceRate * (1 - contract.commissionRate));
+    }
+    return total;
+  }, 0);
+
   const handleFinalizeService = (contractId: string) => {
     finalizeContractByProvider(contractId);
   };
@@ -68,6 +76,9 @@ const ProviderDashboard: React.FC = () => {
               </p>
               <p className="mb-2">
                 <span className="font-medium">Estado:</span> {provider.state}
+              </p>
+              <p className="mb-2 text-lg font-bold text-green-600 dark:text-green-400">
+                <span className="font-medium">Ganancias Acumuladas:</span> ${accumulatedEarnings.toFixed(2)} USD
               </p>
               <div className="mt-4">
                 <h3 className="text-xl font-semibold mb-2">Calificación:</h3>
