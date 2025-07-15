@@ -25,6 +25,31 @@ const AdminDashboard: React.FC = () => {
   const [activeDisputesLimit, setActiveDisputesLimit] = useState(INITIAL_DISPLAY_LIMIT);
   const [resolvedDisputesLimit, setResolvedDisputesLimit] = useState(INITIAL_DISPLAY_LIMIT);
 
+  // Calculate Held Funds
+  const heldFunds = useMemo(() => {
+    return contracts.reduce((total, contract) => {
+      // Funds are held if client has deposited AND contract is active or disputed
+      if (contract.clientDeposited && (contract.status === "active" || contract.status === "disputed")) {
+        return total + contract.serviceRate;
+      }
+      return total;
+    }, 0);
+  }, [contracts]);
+
+  // Calculate Total Commissions Earned
+  const totalCommissions = useMemo(() => {
+    return contracts.reduce((total, contract) => {
+      // Commission is earned when contract is finalized normally OR finalized by dispute to provider
+      if (contract.status === "finalized") {
+        return total + (contract.serviceRate * contract.commissionRate);
+      }
+      if (contract.status === "finalized_by_dispute" && contract.disputeResolution === "toProvider") {
+        return total + (contract.serviceRate * contract.commissionRate);
+      }
+      return total;
+    }, 0);
+  }, [contracts]);
+
   // Combined list of all relevant contracts (disputed and finalized_by_dispute)
   const allRelevantContracts = useMemo(() => {
     const lowerCaseSearchTerm = searchTermDisputes.toLowerCase();
@@ -112,6 +137,35 @@ const AdminDashboard: React.FC = () => {
           <p className="text-xl text-gray-600 dark:text-gray-300 text-center mb-8">
             Gestiona los contratos en disputa y revisa las resoluciones.
           </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <Card className="bg-blue-50 dark:bg-blue-900 border-blue-200 dark:border-blue-700">
+              <CardHeader>
+                <CardTitle className="text-blue-800 dark:text-blue-200">Fondos Retenidos</CardTitle>
+                <CardDescription className="text-blue-600 dark:text-blue-400">
+                  Dinero en custodia para contratos activos o en disputa.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-4xl font-bold text-blue-800 dark:text-blue-200">
+                  ${heldFunds.toFixed(2)} USD
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="bg-green-50 dark:bg-green-900 border-green-200 dark:border-green-700">
+              <CardHeader>
+                <CardTitle className="text-green-800 dark:text-green-200">Comisiones Obtenidas</CardTitle>
+                <CardDescription className="text-green-600 dark:text-green-400">
+                  Ganancias de la plataforma por servicios finalizados.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-4xl font-bold text-green-800 dark:text-green-200">
+                  ${totalCommissions.toFixed(2)} USD
+                </p>
+              </CardContent>
+            </Card>
+          </div>
 
           <h2 className="text-2xl font-bold mb-4 text-center">Disputas Activas</h2>
           <div className="mb-6">
