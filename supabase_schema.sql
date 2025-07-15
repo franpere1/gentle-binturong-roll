@@ -6,7 +6,7 @@ DROP TABLE IF EXISTS public.users CASCADE;
 
 -- Create the 'users' table, linked to Supabase Auth
 CREATE TABLE public.users (
-    id uuid PRIMARY KEY REFERENCES auth.users(id), -- Link to Supabase Auth user ID
+    id uuid PRIMARY KEY DEFAULT auth.uid() REFERENCES auth.users(id), -- Link to Supabase Auth user ID, with default value
     name text NOT NULL,
     email text NOT NULL UNIQUE, -- Email will also be managed by Supabase Auth
     state text NOT NULL,
@@ -40,6 +40,8 @@ TO authenticated
 USING (auth.uid() = id);
 
 -- Allow users to insert their own profile (after Supabase Auth signup)
+-- The WITH CHECK (auth.uid() = id) is still important for security,
+-- even if the ID defaults to auth.uid()
 CREATE POLICY "Allow users to insert their own profile"
 ON public.users FOR INSERT
 TO authenticated

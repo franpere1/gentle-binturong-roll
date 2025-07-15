@@ -167,7 +167,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           // Insert admin profile into public.users
           const { error: profileError } = await supabase.from('users').insert([
             {
-              id: authData.user.id,
               name: "Admin",
               email: "admin@admin.com",
               state: "Distrito Capital",
@@ -240,7 +239,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (authData.user) {
       const { error: profileError } = await supabase.from('users').insert([
         {
-          id: authData.user.id,
           name: clientData.name,
           email: clientData.email,
           state: clientData.state,
@@ -288,7 +286,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (authData.user) {
       const { error: profileError } = await supabase.from('users').insert([
         {
-          id: authData.user.id,
           name: providerData.name,
           email: providerData.email,
           state: providerData.state,
