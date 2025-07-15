@@ -203,7 +203,7 @@ const ProviderDashboard: React.FC = () => {
                     <ScrollArea className="h-40 w-full rounded-md border p-4">
                       <ul className="list-disc list-inside text-sm text-gray-600 dark:text-gray-400">
                         {(provider.feedback || []).reverse().map((f, index) => (
-                          <li key={index}>
+                          <li key={index} className="break-words">
                             <span className={`font-medium ${
                               f.type === "positive" ? "text-green-600" :
                               f.type === "negative" ? "text-red-600" : "text-gray-500"
