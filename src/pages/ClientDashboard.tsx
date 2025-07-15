@@ -98,7 +98,7 @@ const ClientDashboard: React.FC = () => {
 
       // 3. Then prioritize 'active' contracts where client has finalized and waiting for provider
       const aIsClientFinalizedWaitingProvider = a.status === "active" && a.clientDeposited && a.clientAction === "finalize" && a.providerAction === "none";
-      const bIsClientFinalizedWaitingProvider = b.status === "active" && b.clientDeposited && b.clientAction === "finalize" && b.providerAction === "none";
+      const bIsClientFinalizedWaitingProvider = b.status === "active" && b.clientDeposited && a.clientAction === "finalize" && b.providerAction === "none";
 
       if (aIsClientFinalizedWaitingProvider && !bIsClientFinalizedWaitingProvider) return -1;
       if (!aIsClientFinalizedWaitingProvider && bIsClientFinalizedWaitingProvider) return 1;
@@ -344,7 +344,15 @@ const ClientDashboard: React.FC = () => {
                     statusColorClass = "text-green-600";
                     break;
                   case "cancelled":
-                    statusText = "Cancelado";
+                    if (contract.clientAction === "cancel" && contract.providerAction !== "cancel") {
+                      statusText = "Cancelado por ti";
+                    } else if (contract.providerAction === "cancel" && contract.clientAction !== "cancel") {
+                      statusText = "Cancelado por el proveedor";
+                    } else if (contract.clientAction === "cancel" && contract.providerAction === "cancel") {
+                      statusText = "Cancelado por ambas partes";
+                    } else {
+                      statusText = "Cancelado"; // Fallback
+                    }
                     statusColorClass = "text-red-600";
                     break;
                   case "disputed":
