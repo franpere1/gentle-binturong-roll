@@ -308,7 +308,7 @@ const ProviderDashboard: React.FC = () => {
                   (contract.status === "active" && contract.clientDeposited && contract.providerAction !== "finalize" && contract.providerAction !== "cancel" && contract.clientAction !== "dispute" && contract.clientAction !== "finalize");
 
                 // Provider can chat if contract is active or disputed and client has deposited
-                const canProviderChat = (contract.status === "active" || contract.status === "disputed") && contract.clientDeposited;
+                const canProviderChat = (contract.status === "pending" || contract.status === "offered" || contract.status === "active" || contract.status === "disputed");
 
                 let statusText = "";
                 let statusColorClass = "";
@@ -461,7 +461,9 @@ const ProviderDashboard: React.FC = () => {
             <DialogHeader>
               <DialogTitle>Chat con {chattingWithClient.name}</DialogTitle>
               <DialogDescription>
-                Conversación sobre el contrato activo. Los números no serán enmascarados aquí.
+                {chatContractStatus === "pending" || chatContractStatus === "offered" || chatContractStatus === "initial_contact"
+                  ? "Conversación previa al pago. Los números y palabras numéricas sensibles serán enmascarados para proteger tu privacidad."
+                  : "Conversación sobre el contrato activo. Los números no serán enmascarados aquí."}
               </DialogDescription>
             </DialogHeader>
             <ChatWindow otherUser={chattingWithClient} contractStatus={chatContractStatus} />

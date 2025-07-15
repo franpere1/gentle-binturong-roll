@@ -326,7 +326,7 @@ const ClientDashboard: React.FC = () => {
                   contract.providerAction === "none"; // Changed from 'make_offer' to 'none' as 'make_offer' is provider's initial action
 
                 // Client can chat if contract is active or disputed and client has deposited
-                const canClientChat = (contract.status === "active" || contract.status === "disputed") && contract.clientDeposited;
+                const canClientChat = (contract.status === "pending" || contract.status === "offered" || contract.status === "active" || contract.status === "disputed");
 
                 let statusText = "";
                 let statusColorClass = "";
@@ -439,6 +439,11 @@ const ClientDashboard: React.FC = () => {
                             Cancelar Contrato
                           </Button>
                         )}
+                        {canClientChat && provider && (
+                          <Button className="w-full" onClick={() => handleChatWithProvider(contract)}>
+                            Chatear
+                          </Button>
+                        )}
                         {canClientDispute && (
                           <Button variant="destructive" className="w-full" onClick={() => handleDisputeContract(contract.id)}>
                             Disputar
@@ -449,13 +454,8 @@ const ClientDashboard: React.FC = () => {
                             Cancelar Disputa
                           </Button>
                         )}
-                        {canClientChat && provider && (
-                          <Button className="w-full" onClick={() => handleChatWithProvider(contract)}>
-                            Chatear
-                          </Button>
-                        )}
                         {/* Display message if client has acted or is waiting for provider to act first */}
-                        {!canClientAcceptOffer && !canClientFinalize && !canClientCancel && !canClientDispute && !canClientCancelDispute && contract.status !== "finalized" && contract.status !== "cancelled" && contract.status !== "disputed" && contract.status !== "finalized_by_dispute" && (
+                        {!canClientAcceptOffer && !canClientFinalize && !canClientCancel && !canClientDispute && !canClientCancelDispute && !canClientChat && contract.status !== "finalized" && contract.status !== "cancelled" && contract.status !== "disputed" && contract.status !== "finalized_by_dispute" && (
                           <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
                             {isWaitingForProviderAction ? "Esperando acción del proveedor." : "Esperando acción de la otra parte."}
                           </p>
@@ -574,7 +574,9 @@ const ClientDashboard: React.FC = () => {
             <DialogHeader>
               <DialogTitle>Chat con {chattingWithProvider.name}</DialogTitle>
               <DialogDescription>
-                Conversación sobre el contrato activo. Los números no serán enmascarados aquí.
+                {chatContractStatus === "pending" || chatContractStatus === "offered" || chatContractStatus === "initial_contact"
+                  ? "Conversación previa al pago. Los números y palabras numéricas sensibles serán enmascarados para proteger tu privacidad."
+                  : "Conversación sobre el contrato activo. Los números no serán enmascarados aquí."}
               </DialogDescription>
             </DialogHeader>
             <ChatWindow otherUser={chattingWithProvider} contractStatus={chatContractStatus} />
