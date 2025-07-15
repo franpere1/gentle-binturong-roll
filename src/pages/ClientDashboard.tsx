@@ -47,6 +47,7 @@ const ClientDashboard: React.FC = () => {
   const [contractToPay, setContractToPay] = useState<Contract | null>(null);
   const [isContractChatModalOpen, setIsContractChatModalOpen] = useState(false); // New state for contract chat modal
   const [chattingWithProvider, setChattingWithProvider] = useState<Provider | null>(null); // New state for provider in chat
+  const [chatContractStatus, setChatContractStatus] = useState<Contract['status'] | 'initial_contact' | undefined>(undefined); // New state for chat contract status
 
   const allProviders = getAllProviders();
   const clientContracts = client ? getContractsForUser(client.id) : [];
@@ -190,10 +191,11 @@ const ClientDashboard: React.FC = () => {
     }
   };
 
-  const handleChatWithProvider = (providerId: string) => {
-    const provider = allProviders.find(p => p.id === providerId);
+  const handleChatWithProvider = (contract: Contract) => {
+    const provider = allProviders.find(p => p.id === contract.providerId);
     if (provider) {
       setChattingWithProvider(provider);
+      setChatContractStatus(contract.status); // Pass the actual contract status
       setIsContractChatModalOpen(true);
     }
   };
@@ -321,7 +323,7 @@ const ClientDashboard: React.FC = () => {
                   contract.status === "active" && 
                   contract.clientDeposited && 
                   contract.clientAction === "accept_offer" && 
-                  contract.providerAction === "make_offer";
+                  contract.providerAction === "none"; // Changed from 'make_offer' to 'none' as 'make_offer' is provider's initial action
 
                 // Client can chat if contract is active or disputed and client has deposited
                 const canClientChat = (contract.status === "active" || contract.status === "disputed") && contract.clientDeposited;
@@ -448,7 +450,7 @@ const ClientDashboard: React.FC = () => {
                           </Button>
                         )}
                         {canClientChat && provider && (
-                          <Button className="w-full" onClick={() => handleChatWithProvider(provider.id)}>
+                          <Button className="w-full" onClick={() => handleChatWithProvider(contract)}>
                             Chatear
                           </Button>
                         )}
@@ -575,7 +577,7 @@ const ClientDashboard: React.FC = () => {
                 Conversación sobre el contrato activo. Los números no serán enmascarados aquí.
               </DialogDescription>
             </DialogHeader>
-            <ChatWindow otherUser={chattingWithProvider} allowNumbers={true} />
+            <ChatWindow otherUser={chattingWithProvider} contractStatus={chatContractStatus} />
           </DialogContent>
         </Dialog>
       )}

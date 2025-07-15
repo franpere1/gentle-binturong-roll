@@ -38,6 +38,7 @@ const ProviderDashboard: React.FC = () => {
   const [contractToOffer, setContractToOffer] = useState<Contract | null>(null); // State to hold contract for offer
   const [isContractChatModalOpen, setIsContractChatModalOpen] = useState(false); // New state for contract chat modal
   const [chattingWithClient, setChattingWithClient] = useState<Client | null>(null); // New state for client in chat
+  const [chatContractStatus, setChatContractStatus] = useState<Contract['status'] | 'initial_contact' | undefined>(undefined); // New state for chat contract status
 
   const providerContracts = provider ? getContractsForUser(provider.id) : [];
 
@@ -129,10 +130,11 @@ const ProviderDashboard: React.FC = () => {
     setContractToOffer(null);
   };
 
-  const handleChatWithClient = (clientId: string) => {
-    const client = findUserById(clientId) as Client | undefined;
+  const handleChatWithClient = (contract: Contract) => {
+    const client = findUserById(contract.clientId) as Client | undefined;
     if (client) {
       setChattingWithClient(client);
+      setChatContractStatus(contract.status); // Pass the actual contract status
       setIsContractChatModalOpen(true);
     }
   };
@@ -424,7 +426,7 @@ const ProviderDashboard: React.FC = () => {
                           </Button>
                         )}
                         {canProviderChat && clientUser && (
-                          <Button className="w-full" onClick={() => handleChatWithClient(clientUser.id)}>
+                          <Button className="w-full" onClick={() => handleChatWithClient(contract)}>
                             Chatear
                           </Button>
                         )}
@@ -462,7 +464,7 @@ const ProviderDashboard: React.FC = () => {
                 Conversación sobre el contrato activo. Los números no serán enmascarados aquí.
               </DialogDescription>
             </DialogHeader>
-            <ChatWindow otherUser={chattingWithClient} allowNumbers={true} />
+            <ChatWindow otherUser={chattingWithClient} contractStatus={chatContractStatus} />
           </DialogContent>
         </Dialog>
       )}

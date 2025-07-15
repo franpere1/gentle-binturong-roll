@@ -116,7 +116,7 @@ const ProviderContactModal: React.FC<ProviderContactModalProps> = ({
             </div>
             <div className="space-y-2">
               <h3 className="text-lg font-semibold">Chat con {provider.name}</h3>
-              <ChatWindow otherUser={provider} allowNumbers={false} /> {/* Explicitly set to false */}
+              <ChatWindow otherUser={provider} contractStatus="initial_contact" /> {/* Pass 'initial_contact' status */}
             </div>
             <div className="mt-4">
               {isClient && clientHasExistingContract ? (
