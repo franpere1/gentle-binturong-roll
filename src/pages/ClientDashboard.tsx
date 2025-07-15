@@ -296,6 +296,13 @@ const ClientDashboard: React.FC = () => {
                   contract.clientAction !== "cancel" && 
                   contract.clientAction !== "dispute";
 
+                // Check if client has just accepted offer and is waiting for provider's first action
+                const isWaitingForProviderAction = 
+                  contract.status === "active" && 
+                  contract.clientDeposited && 
+                  contract.clientAction === "accept_offer" && 
+                  contract.providerAction === "none";
+
                 let statusText = "";
                 let statusColorClass = "";
 
@@ -309,7 +316,7 @@ const ClientDashboard: React.FC = () => {
                     statusColorClass = "text-purple-600";
                     break;
                   case "active":
-                    if (contract.clientDeposited && contract.clientAction === "accept_offer" && contract.providerAction === "none") {
+                    if (isWaitingForProviderAction) {
                       statusText = "Activo (Esperando respuesta del proveedor)";
                       statusColorClass = "text-blue-600";
                     } else if (contract.clientAction === "finalize" && contract.providerAction === "none") {
@@ -415,7 +422,7 @@ const ClientDashboard: React.FC = () => {
                         {/* Display message if client has acted or is waiting for provider to act first */}
                         {!canClientAcceptOffer && !canClientFinalize && !canClientCancel && !canClientDispute && contract.status !== "finalized" && contract.status !== "cancelled" && contract.status !== "disputed" && contract.status !== "finalized_by_dispute" && (
                           <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
-                            {contract.clientAction !== "none" && contract.clientAction !== "accept_offer" ? "Esperando acción de la otra parte." : "Esperando acción del proveedor."}
+                            {isWaitingForProviderAction ? "Esperando acción del proveedor." : "Esperando acción de la otra parte."}
                           </p>
                         )}
                       </div>
