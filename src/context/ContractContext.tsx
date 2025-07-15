@@ -118,17 +118,23 @@ export const ContractProvider: React.FC<ContractProviderProps> = ({ children }) 
 
         let updatedContract = { ...contract, updatedAt: Date.now() };
 
-        // 1. Registrar la acción del actor
+        // Check if contract is already in a final state
+        if (updatedContract.status === "finalized" || updatedContract.status === "cancelled" || updatedContract.status === "disputed") {
+          showError("Este contrato ya ha sido finalizado, cancelado o está en disputa.");
+          return contract;
+        }
+
+        // 1. Record the action of the current actor
         if (actorId === contract.clientId) {
           if (updatedContract.clientAction !== "none") {
             showError("Ya has realizado una acción en este contrato.");
-            return contract; // No modificar si ya actuó
+            return contract;
           }
           updatedContract.clientAction = actionType;
         } else if (actorId === contract.providerId) {
           if (updatedContract.providerAction !== "none") {
             showError("Ya has realizado una acción en este contrato.");
-            return contract; // No modificar si ya actuó
+            return contract;
           }
           updatedContract.providerAction = actionType;
         } else {
@@ -136,18 +142,13 @@ export const ContractProvider: React.FC<ContractProviderProps> = ({ children }) 
           return contract;
         }
 
-        // 2. Determinar el nuevo estado del contrato
-        const { clientAction, providerAction, status, serviceRate, commissionRate } = updatedContract;
-
-        if (status === "finalized" || status === "cancelled" || status === "disputed") {
-          showError("Este contrato ya ha sido finalizado, cancelado o está en disputa.");
-          return contract;
-        }
+        // 2. Determine the new status based on both parties' actions
+        const { clientAction, providerAction, clientDeposited } = updatedContract;
 
         if (clientAction === "finalize" && providerAction === "finalize") {
           updatedContract.status = "finalized";
-          const amountToProvider = serviceRate * (1 - commissionRate);
-          const commissionAmount = serviceRate * commissionRate;
+          const amountToProvider = updatedContract.serviceRate * (1 - updatedContract.commissionRate);
+          const commissionAmount = updatedContract.serviceRate * updatedContract.commissionRate;
           showSuccess(
             `Contrato "${updatedContract.serviceTitle}" finalizado. ` +
             `Proveedor recibe $${amountToProvider.toFixed(2)} USD. ` +
@@ -164,23 +165,12 @@ export const ContractProvider: React.FC<ContractProviderProps> = ({ children }) 
         ) {
           updatedContract.status = "disputed";
           showError(`Conflicto en el contrato "${updatedContract.serviceTitle}". Se ha iniciado una disputa. Un administrador revisará el caso.`);
-        } else if (actionType === 'cancel' && updatedContract.clientDeposited) {
-            // If one party cancels and the other hasn't acted yet, and funds are deposited, it's a cancellation.
-            // This covers cases where client cancels active contract, or provider cancels active contract.
-            // If client cancels a pending contract, it's handled by the first condition.
-            if (
-                (actorId === contract.clientId && providerAction === "none") ||
-                (actorId === contract.providerId && clientAction === "none")
-            ) {
-                updatedContract.status = "cancelled";
-                showSuccess(`Contrato "${updatedContract.serviceTitle}" cancelado. Fondos reembolsados al cliente.`);
-                clearConversationMessages(updatedContract.clientId, updatedContract.providerId);
-            } else {
-                // One party cancelled, other has not acted yet, but contract is not active (e.g., pending)
-                showSuccess(`Tu acción de ${actionType === 'finalize' ? 'finalizar' : 'cancelar'} el contrato "${updatedContract.serviceTitle}" ha sido registrada. Esperando la acción de la otra parte.`);
-            }
         } else {
-          // Acción registrada, esperando a la otra parte o contrato aún pendiente de depósito
+          // If client has deposited funds and contract is still pending, it becomes active.
+          // Otherwise, the status remains as is, and we just show a message about the action being recorded.
+          if (clientDeposited && updatedContract.status === "pending") {
+              updatedContract.status = "active";
+          }
           showSuccess(`Tu acción de ${actionType === 'finalize' ? 'finalizar' : 'cancelar'} el contrato "${updatedContract.serviceTitle}" ha sido registrada. Esperando la acción de la otra parte.`);
         }
 

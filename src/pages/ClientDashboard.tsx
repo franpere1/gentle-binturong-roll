@@ -229,14 +229,14 @@ const ClientDashboard: React.FC = () => {
                 const provider = allProviders.find(p => p.id === contract.providerId);
                 
                 // Client can finalize ONLY if provider has finalized and client hasn't acted
-                const canClientFinalize = contract.providerAction === "finalize" && contract.clientAction === "none";
+                const canClientFinalize = contract.status === "active" && contract.clientDeposited && contract.providerAction === "finalize" && contract.clientAction === "none";
                 
                 // Client can cancel if:
                 // 1. Contract is pending (before deposit) and client hasn't acted
                 // 2. Contract is active AND provider has initiated cancellation AND client hasn't acted
                 const canClientCancel = 
                   (contract.status === "pending" && contract.clientAction === "none") ||
-                  (contract.status === "active" && contract.providerAction === "cancel" && contract.clientAction === "none");
+                  (contract.status === "active" && contract.clientDeposited && contract.providerAction === "cancel" && contract.clientAction === "none");
 
                 let statusText = "";
                 let statusColorClass = "";
@@ -414,7 +414,6 @@ const ClientDashboard: React.FC = () => {
           onClose={() => setIsCompletionModal(false)}
           contract={contractToFinalize}
           providerName={allProviders.find(p => p.id === contractToFinalize.providerId)?.name || "Desconocido"}
-          // onFeedbackProvided prop removed as it's handled by useEffect
         />
       )}
       {isFeedbackModalOpen && feedbackData && (
