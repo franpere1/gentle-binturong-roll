@@ -114,8 +114,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       prevUsers.map((user) => {
         if (user.id === providerId && user.type === "provider") {
           const provider = user as Provider;
+          // Asegurarse de que provider.feedback sea un array antes de usarlo
+          const currentFeedback = provider.feedback || []; 
           const newFeedback: Feedback = {
-            id: `feedback-${provider.feedback.length + 1}-${Date.now()}`,
+            id: `feedback-${currentFeedback.length + 1}-${Date.now()}`,
             clientId: currentUser!.id, // Asumimos que currentUser existe y es el cliente
             providerId: provider.id,
             type,
@@ -123,10 +125,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             timestamp: Date.now(),
           };
 
-          const updatedFeedback = [...provider.feedback, newFeedback];
+          const updatedFeedback = [...currentFeedback, newFeedback];
           const positiveCount = updatedFeedback.filter(
             (f) => f.type === FeedbackType.Positive
           ).length;
+          // La calificación por estrellas se basa en la cantidad de feedback positivo
+          // Por ejemplo, 1 estrella por cada 5 feedbacks positivos, hasta un máximo de 5 estrellas.
           const newStarRating = Math.min(5, Math.floor(positiveCount / 5));
 
           return {
