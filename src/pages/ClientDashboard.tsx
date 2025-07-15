@@ -317,7 +317,7 @@ const ClientDashboard: React.FC = () => {
                     break;
                   case "active":
                     if (contract.clientDeposited && contract.clientAction === "accept_offer" && contract.providerAction === "none") {
-                      statusText = "Activo (Esperando acción del proveedor)";
+                      statusText = "Activo (Esperando respuesta del proveedor)"; // Changed text here
                       statusColorClass = "text-blue-600";
                     } else if (contract.clientAction === "finalize" && contract.providerAction === "none") {
                       statusText = "Activo (Esperando confirmación del proveedor)";
