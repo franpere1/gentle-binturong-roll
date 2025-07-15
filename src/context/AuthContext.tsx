@@ -10,6 +10,7 @@ import { showSuccess, showError } from "@/utils/toast";
 
 interface AuthContextType {
   currentUser: User | null;
+  isLoading: boolean; // Nuevo estado de carga
   login: (user: User) => void;
   logout: () => void;
   registerClient: (client: Client) => boolean;
@@ -36,22 +37,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return storedUsers ? JSON.parse(storedUsers) : [];
   });
 
-  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true); // Inicialmente cargando
+
+  useEffect(() => {
+    // Cargar currentUser desde localStorage al montar el componente
     const storedCurrentUser = localStorage.getItem("currentUser");
-    return storedCurrentUser ? JSON.parse(storedCurrentUser) : null;
-  });
+    if (storedCurrentUser) {
+      setCurrentUser(JSON.parse(storedCurrentUser));
+    }
+    setIsLoading(false); // Una vez cargado (o no encontrado), se termina la carga
+  }, []); // Se ejecuta solo una vez al montar
 
   useEffect(() => {
     localStorage.setItem("appUsers", JSON.stringify(users));
   }, [users]);
 
   useEffect(() => {
-    if (currentUser) {
-      localStorage.setItem("currentUser", JSON.stringify(currentUser));
-    } else {
-      localStorage.removeItem("currentUser");
+    if (!isLoading) { // Solo guardar en localStorage si ya se terminó la carga inicial
+      if (currentUser) {
+        localStorage.setItem("currentUser", JSON.stringify(currentUser));
+      } else {
+        localStorage.removeItem("currentUser");
+      }
     }
-  }, [currentUser]);
+  }, [currentUser, isLoading]);
 
   const findUserByEmail = (email: string) => {
     return users.find((user) => user.email === email);
@@ -148,6 +158,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     <AuthContext.Provider
       value={{
         currentUser,
+        isLoading, // Proporcionar el estado de carga
         login,
         logout,
         registerClient,
