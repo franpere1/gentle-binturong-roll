@@ -34,6 +34,17 @@ export const ContractProvider: React.FC<ContractProviderProps> = ({ children }) 
     return storedContracts ? JSON.parse(storedContracts) : [];
   });
 
+  // Effect to re-load contracts from localStorage when currentUser changes (e.g., after login/logout)
+  useEffect(() => {
+    console.log("ContractContext: currentUser changed, re-loading contracts from localStorage.");
+    const storedContracts = localStorage.getItem("appContracts");
+    const latestContracts = storedContracts ? JSON.parse(storedContracts) : [];
+    // Only update if the loaded contracts are different to avoid unnecessary re-renders
+    if (JSON.stringify(latestContracts) !== JSON.stringify(contracts)) {
+      setContracts(latestContracts);
+    }
+  }, [currentUser]); // Dependency on currentUser
+
   useEffect(() => {
     localStorage.setItem("appContracts", JSON.stringify(contracts));
   }, [contracts]);
