@@ -9,9 +9,10 @@ import { showError } from "@/utils/toast"; // Importar showError
 
 interface ChatWindowProps {
   otherUser: User; // El otro usuario con el que se está chateando (proveedor o cliente)
+  allowNumbers?: boolean; // Nuevo prop para permitir números sin enmascarar
 }
 
-const ChatWindow: React.FC<ChatWindowProps> = ({ otherUser }) => {
+const ChatWindow: React.FC<ChatWindowProps> = ({ otherUser, allowNumbers = false }) => {
   const { currentUser } = useAuth();
   const { sendMessage, getMessagesForConversation } = useChat();
   const [messageInput, setMessageInput] = useState("");
@@ -28,7 +29,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ otherUser }) => {
       // Expresión regular para encontrar secuencias de 6 o más dígitos consecutivos
       const consecutiveNumbersRegex = /\d{6,}/g;
 
-      if (consecutiveNumbersRegex.test(messageToSend)) {
+      if (!allowNumbers && consecutiveNumbersRegex.test(messageToSend)) {
         messageToSend = messageToSend.replace(consecutiveNumbersRegex, (match) => {
           numbersMasked = true;
           return '*'.repeat(match.length); // Reemplazar con asteriscos de la misma longitud

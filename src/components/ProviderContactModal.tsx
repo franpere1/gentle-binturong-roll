@@ -11,8 +11,7 @@ import { Button } from "@/components/ui/button";
 import ChatWindow from "./ChatWindow";
 import { useAuth } from "@/context/AuthContext";
 import { useContracts } from "@/context/ContractContext";
-import { showError, showSuccess } from "@/utils/toast";
-import PaymentSimulationModal from "./PaymentSimulationModal"; // Keep import for potential future use or if other parts still use it
+import { showError, showSuccess } from "@/utils/toast"; // Keep import for potential future use or if other parts still use it
 import { useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
@@ -117,7 +116,7 @@ const ProviderContactModal: React.FC<ProviderContactModalProps> = ({
             </div>
             <div className="space-y-2">
               <h3 className="text-lg font-semibold">Chat con {provider.name}</h3>
-              <ChatWindow otherUser={provider} />
+              <ChatWindow otherUser={provider} allowNumbers={false} /> {/* Explicitly set to false */}
             </div>
             <div className="mt-4">
               {isClient && clientHasExistingContract ? (

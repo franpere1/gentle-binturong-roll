@@ -27,6 +27,7 @@ import ContractCompletionModal from "@/components/ContractCompletionModal";
 import FeedbackModal from "@/components/FeedbackModal";
 import PaymentSimulationModal from "@/components/PaymentSimulationModal";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import ChatWindow from "@/components/ChatWindow"; // Import ChatWindow
 
 const ClientDashboard: React.FC = () => {
   const { currentUser, getAllProviders } = useAuth();
@@ -44,6 +45,8 @@ const ClientDashboard: React.FC = () => {
   const [feedbackData, setFeedbackData] = useState<{ contract: Contract; providerName: string } | null>(null);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [contractToPay, setContractToPay] = useState<Contract | null>(null);
+  const [isContractChatModalOpen, setIsContractChatModalOpen] = useState(false); // New state for contract chat modal
+  const [chattingWithProvider, setChattingWithProvider] = useState<Provider | null>(null); // New state for provider in chat
 
   const allProviders = getAllProviders();
   const clientContracts = client ? getContractsForUser(client.id) : [];
@@ -181,6 +184,14 @@ const ClientDashboard: React.FC = () => {
     }
   };
 
+  const handleChatWithProvider = (providerId: string) => {
+    const provider = allProviders.find(p => p.id === providerId);
+    if (provider) {
+      setChattingWithProvider(provider);
+      setIsContractChatModalOpen(true);
+    }
+  };
+
   if (!client) {
     return (
       <div className="min-h-screen flex flex-col">
@@ -301,7 +312,10 @@ const ClientDashboard: React.FC = () => {
                   contract.status === "active" && 
                   contract.clientDeposited && 
                   contract.clientAction === "accept_offer" && 
-                  contract.providerAction === "make_offer"; // Corrected condition
+                  contract.providerAction === "make_offer";
+
+                // Client can chat if contract is active and client has deposited
+                const canClientChat = contract.status === "active" && contract.clientDeposited;
 
                 let statusText = "";
                 let statusColorClass = "";
@@ -419,6 +433,11 @@ const ClientDashboard: React.FC = () => {
                             Disputar
                           </Button>
                         )}
+                        {canClientChat && provider && (
+                          <Button className="w-full" onClick={() => handleChatWithProvider(provider.id)}>
+                            Chatear
+                          </Button>
+                        )}
                         {/* Display message if client has acted or is waiting for provider to act first */}
                         {!canClientAcceptOffer && !canClientFinalize && !canClientCancel && !canClientDispute && contract.status !== "finalized" && contract.status !== "cancelled" && contract.status !== "disputed" && contract.status !== "finalized_by_dispute" && (
                           <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
@@ -532,6 +551,19 @@ const ClientDashboard: React.FC = () => {
           initialAmount={contractToPay.serviceRate}
           onConfirm={handlePaymentConfirmed}
         />
+      )}
+      {isContractChatModalOpen && chattingWithProvider && (
+        <Dialog open={isContractChatModalOpen} onOpenChange={setIsContractChatModalOpen}>
+          <DialogContent className="sm:max-w-[425px] md:max-w-lg lg:max-w-2xl overflow-y-auto max-h-[90vh]">
+            <DialogHeader>
+              <DialogTitle>Chat con {chattingWithProvider.name}</DialogTitle>
+              <DialogDescription>
+                Conversación sobre el contrato activo. Los números no serán enmascarados aquí.
+              </DialogDescription>
+            </DialogHeader>
+            <ChatWindow otherUser={chattingWithProvider} allowNumbers={true} />
+          </DialogContent>
+        </Dialog>
       )}
       <MadeWithDyad />
     </div>
