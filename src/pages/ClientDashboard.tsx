@@ -143,6 +143,12 @@ const ClientDashboard: React.FC = () => {
     }
   };
 
+  const handleDisputeContract = (contractId: string) => {
+    if (currentUser) {
+      handleContractAction(contractId, currentUser.id, 'dispute');
+    }
+  };
+
   if (!client) {
     return (
       <div className="min-h-screen flex flex-col">
@@ -238,6 +244,17 @@ const ClientDashboard: React.FC = () => {
                   (contract.status === "pending" && contract.clientAction === "none") ||
                   (contract.status === "active" && contract.clientDeposited && contract.providerAction === "cancel" && contract.clientAction === "none");
 
+                // Client can dispute if:
+                // Contract is active (funds deposited), and client hasn't taken any action (finalize/cancel/dispute)
+                // and the contract is not already finalized, cancelled, or disputed.
+                const canClientDispute = 
+                  contract.status === "active" && 
+                  contract.clientDeposited && 
+                  contract.clientAction === "none" &&
+                  contract.status !== "finalized" &&
+                  contract.status !== "cancelled" &&
+                  contract.status !== "disputed";
+
                 let statusText = "";
                 let statusColorClass = "";
 
@@ -273,7 +290,7 @@ const ClientDashboard: React.FC = () => {
                     statusColorClass = "text-red-600";
                     break;
                   case "disputed":
-                    statusText = "En Disputa";
+                    statusText = "En Disputa (Fondos Retenidos)";
                     statusColorClass = "text-orange-600";
                     break;
                   default:
@@ -305,7 +322,7 @@ const ClientDashboard: React.FC = () => {
                       </p>
                       <p className="mb-1">
                         <span className="font-medium">Tu Acción:</span>{" "}
-                        {contract.clientAction === "none" ? "Pendiente" : contract.clientAction === "finalize" ? "Finalizar" : "Cancelar"}
+                        {contract.clientAction === "none" ? "Pendiente" : contract.clientAction === "finalize" ? "Finalizar" : contract.clientAction === "cancel" ? "Cancelar" : "Disputar"}
                       </p>
                       <p className="mb-1">
                         <span className="font-medium">Acción Proveedor:</span>{" "}
@@ -322,8 +339,13 @@ const ClientDashboard: React.FC = () => {
                             Cancelar Contrato
                           </Button>
                         )}
+                        {canClientDispute && (
+                          <Button variant="destructive" className="w-full" onClick={() => handleDisputeContract(contract.id)}>
+                            Disputar
+                          </Button>
+                        )}
                         {/* Display message if client has acted or is waiting for provider to act first */}
-                        {!canClientFinalize && !canClientCancel && contract.status !== "finalized" && contract.status !== "cancelled" && contract.status !== "disputed" && (
+                        {!canClientFinalize && !canClientCancel && !canClientDispute && contract.status !== "finalized" && contract.status !== "cancelled" && contract.status !== "disputed" && (
                           <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
                             {contract.clientAction !== "none" ? "Esperando acción de la otra parte." : "Esperando acción del proveedor."}
                           </p>

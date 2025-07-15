@@ -97,7 +97,7 @@ export interface Contract {
   serviceRate: number;  // Tarifa del servicio contratado
   status: "pending" | "active" | "finalized" | "cancelled" | "disputed"; // Añadido 'disputed'
   clientDeposited: boolean;
-  clientAction: "none" | "cancel" | "finalize"; // Nuevo: Acción tomada por el cliente
+  clientAction: "none" | "cancel" | "finalize" | "dispute"; // Nuevo: Acción tomada por el cliente
   providerAction: "none" | "cancel" | "finalize"; // Nuevo: Acción tomada por el proveedor
   commissionRate: number; // e.g., 0.10 for 10%
   createdAt: number;

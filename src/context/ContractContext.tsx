@@ -13,7 +13,7 @@ interface ContractContextType {
     serviceRate: number
   ) => Contract | null;
   depositFunds: (contractId: string) => boolean;
-  handleContractAction: (contractId: string, actorId: string, actionType: 'finalize' | 'cancel') => void; // Nueva función
+  handleContractAction: (contractId: string, actorId: string, actionType: 'finalize' | 'cancel' | 'dispute') => void; // Nueva función
   getContractsForUser: (userId: string) => Contract[];
   hasActiveOrPendingContract: (clientId: string, providerId: string) => boolean;
   getLatestContractBetweenUsers: (user1Id: string, user2Id: string) => Contract | null;
@@ -109,7 +109,7 @@ export const ContractProvider: React.FC<ContractProviderProps> = ({ children }) 
     return success;
   };
 
-  const handleContractAction = (contractId: string, actorId: string, actionType: 'finalize' | 'cancel') => {
+  const handleContractAction = (contractId: string, actorId: string, actionType: 'finalize' | 'cancel' | 'dispute') => {
     setContracts((prevContracts) => {
       return prevContracts.map((contract) => {
         if (contract.id !== contractId) {
@@ -124,6 +124,25 @@ export const ContractProvider: React.FC<ContractProviderProps> = ({ children }) 
           return contract;
         }
 
+        // Handle dispute action first
+        if (actionType === 'dispute') {
+          if (actorId === contract.clientId) {
+            if (updatedContract.clientAction === "dispute") {
+              showError("Ya has iniciado una disputa para este contrato.");
+              return contract;
+            }
+            updatedContract.clientAction = "dispute";
+            updatedContract.status = "disputed";
+            showSuccess(`Disputa iniciada para el contrato "${updatedContract.serviceTitle}". Los fondos permanecen retenidos hasta la resolución.`);
+            clearConversationMessages(updatedContract.clientId, updatedContract.providerId);
+            return updatedContract;
+          } else if (actorId === contract.providerId) {
+            showError("Solo el cliente puede iniciar una disputa.");
+            return contract;
+          }
+        }
+
+        // If not a dispute, proceed with finalize/cancel logic
         // 1. Record the action of the current actor
         if (actorId === contract.clientId) {
           if (updatedContract.clientAction !== "none") {
@@ -163,6 +182,7 @@ export const ContractProvider: React.FC<ContractProviderProps> = ({ children }) 
           (clientAction === "finalize" && providerAction === "cancel") ||
           (clientAction === "cancel" && providerAction === "finalize")
         ) {
+          // This is now the automatic dispute if actions conflict, but client can also initiate directly
           updatedContract.status = "disputed";
           showError(`Conflicto en el contrato "${updatedContract.serviceTitle}". Se ha iniciado una disputa. Un administrador revisará el caso.`);
         } else {

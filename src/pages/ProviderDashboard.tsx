@@ -250,8 +250,8 @@ const ProviderDashboard: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {displayedContracts.map((contract) => {
                 const clientUser = findUserById(contract.clientId);
-                const canProviderFinalize = contract.status === "active" && contract.clientDeposited && contract.providerAction === "none" && contract.clientAction !== "cancel";
-                const canProviderCancel = (contract.status === "pending" || contract.status === "active") && contract.providerAction === "none" && contract.clientAction !== "finalize";
+                const canProviderFinalize = contract.status === "active" && contract.clientDeposited && contract.providerAction === "none" && contract.clientAction !== "cancel" && contract.clientAction !== "dispute";
+                const canProviderCancel = (contract.status === "pending" || contract.status === "active") && contract.providerAction === "none" && contract.clientAction !== "finalize" && contract.clientAction !== "dispute";
                 const providerHasActed = contract.providerAction !== "none";
 
                 let statusText = "";
@@ -275,7 +275,11 @@ const ProviderDashboard: React.FC = () => {
                     } else if (contract.clientAction === "cancel" && contract.providerAction === "none") {
                       statusText = "Cancelación iniciada por cliente (Esperando tu acción)";
                       statusColorClass = "text-red-600";
-                    } else {
+                    } else if (contract.clientAction === "dispute") {
+                      statusText = "En Disputa (Iniciada por cliente)";
+                      statusColorClass = "text-orange-600";
+                    }
+                    else {
                       statusText = "Activo";
                       statusColorClass = "text-blue-600";
                     }
@@ -289,7 +293,7 @@ const ProviderDashboard: React.FC = () => {
                     statusColorClass = "text-red-600";
                     break;
                   case "disputed":
-                    statusText = "En Disputa";
+                    statusText = "En Disputa (Fondos Retenidos)";
                     statusColorClass = "text-orange-600";
                     break;
                   default:
@@ -328,7 +332,7 @@ const ProviderDashboard: React.FC = () => {
                       </p>
                       <p className="mb-1">
                         <span className="font-medium">Acción Cliente:</span>{" "}
-                        {contract.clientAction === "none" ? "Pendiente" : contract.clientAction === "finalize" ? "Finalizar" : "Cancelar"}
+                        {contract.clientAction === "none" ? "Pendiente" : contract.clientAction === "finalize" ? "Finalizar" : contract.clientAction === "cancel" ? "Cancelar" : "Disputar"}
                       </p>
                       <div className="flex flex-col gap-2 mt-4">
                         {canProviderFinalize && (
@@ -341,7 +345,7 @@ const ProviderDashboard: React.FC = () => {
                             Cancelar Contrato
                           </Button>
                         )}
-                        {providerHasActed && contract.status === "active" && (
+                        {providerHasActed && contract.status === "active" && contract.clientAction !== "dispute" && (
                           <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
                             Esperando acción de la otra parte.
                           </p>
