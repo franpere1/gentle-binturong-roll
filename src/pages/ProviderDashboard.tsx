@@ -3,7 +3,7 @@ import Header from "@/components/Header";
 import { MadeWithDyad } from "@/components/made-with-dyad";
 import { useAuth } from "@/context/AuthContext";
 import { useContracts } from "@/context/ContractContext";
-import { Provider, Contract } from "@/types";
+import { Provider, Contract, Client } from "@/types"; // Import Client type
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -26,6 +26,7 @@ import { Star } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import MakeOfferModal from "@/components/MakeOfferModal"; // Import the new modal
+import ChatWindow from "@/components/ChatWindow"; // Import ChatWindow
 
 const ProviderDashboard: React.FC = () => {
   const { currentUser, findUserById } = useAuth();
@@ -35,6 +36,8 @@ const ProviderDashboard: React.FC = () => {
   const [searchTermContracts, setSearchTermContracts] = useState("");
   const [isMakeOfferModalOpen, setIsMakeOfferModalOpen] = useState(false); // State for offer modal
   const [contractToOffer, setContractToOffer] = useState<Contract | null>(null); // State to hold contract for offer
+  const [isContractChatModalOpen, setIsContractChatModalOpen] = useState(false); // New state for contract chat modal
+  const [chattingWithClient, setChattingWithClient] = useState<Client | null>(null); // New state for client in chat
 
   const providerContracts = provider ? getContractsForUser(provider.id) : [];
 
@@ -124,6 +127,14 @@ const ProviderDashboard: React.FC = () => {
     makeOffer(contractId, newRate);
     setIsMakeOfferModalOpen(false);
     setContractToOffer(null);
+  };
+
+  const handleChatWithClient = (clientId: string) => {
+    const client = findUserById(clientId) as Client | undefined;
+    if (client) {
+      setChattingWithClient(client);
+      setIsContractChatModalOpen(true);
+    }
   };
 
   if (!provider) {
@@ -273,7 +284,7 @@ const ProviderDashboard: React.FC = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {displayedContracts.map((contract) => {
-                const clientUser = findUserById(contract.clientId);
+                const clientUser = findUserById(contract.clientId) as Client | undefined; // Cast to Client
                 
                 // Provider can make an offer if contract is pending and no offer has been made
                 const canProviderMakeOffer = contract.status === "pending" && contract.providerAction === "none";
@@ -294,6 +305,8 @@ const ProviderDashboard: React.FC = () => {
                   (contract.status === "offered" && contract.providerAction === "make_offer" && contract.clientAction === "none") || // Offered, provider made offer, client hasn't accepted/cancelled
                   (contract.status === "active" && contract.clientDeposited && contract.providerAction !== "finalize" && contract.providerAction !== "cancel" && contract.clientAction !== "dispute" && contract.clientAction !== "finalize");
 
+                // Provider can chat if contract is active and client has deposited
+                const canProviderChat = contract.status === "active" && contract.clientDeposited;
 
                 let statusText = "";
                 let statusColorClass = "";
@@ -410,8 +423,13 @@ const ProviderDashboard: React.FC = () => {
                             Cancelar Contrato
                           </Button>
                         )}
+                        {canProviderChat && clientUser && (
+                          <Button className="w-full" onClick={() => handleChatWithClient(clientUser.id)}>
+                            Chatear
+                          </Button>
+                        )}
                         {/* Display message if provider has acted or is waiting for client to act first */}
-                        {!canProviderMakeOffer && !canProviderFinalize && !canProviderCancel && contract.status !== "finalized" && contract.status !== "cancelled" && contract.status !== "disputed" && contract.status !== "finalized_by_dispute" && (
+                        {!canProviderMakeOffer && !canProviderFinalize && !canProviderCancel && !canProviderChat && contract.status !== "finalized" && contract.status !== "cancelled" && contract.status !== "disputed" && contract.status !== "finalized_by_dispute" && (
                           <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
                             {contract.providerAction !== "none" ? "Esperando acción de la otra parte." : "Esperando acción del cliente."}
                           </p>
@@ -434,6 +452,19 @@ const ProviderDashboard: React.FC = () => {
           initialRate={contractToOffer.serviceRate}
           onConfirmOffer={handleConfirmOffer}
         />
+      )}
+      {isContractChatModalOpen && chattingWithClient && (
+        <Dialog open={isContractChatModalOpen} onOpenChange={setIsContractChatModalOpen}>
+          <DialogContent className="sm:max-w-[425px] md:max-w-lg lg:max-w-2xl overflow-y-auto max-h-[90vh]">
+            <DialogHeader>
+              <DialogTitle>Chat con {chattingWithClient.name}</DialogTitle>
+              <DialogDescription>
+                Conversación sobre el contrato activo. Los números no serán enmascarados aquí.
+              </DialogDescription>
+            </DialogHeader>
+            <ChatWindow otherUser={chattingWithClient} allowNumbers={true} />
+          </DialogContent>
+        </Dialog>
       )}
       <MadeWithDyad />
     </div>
