@@ -116,13 +116,23 @@ const ClientDashboard: React.FC = () => {
 
   // Effect to open feedback modal if a contract just became finalized
   useEffect(() => {
+    console.log("ClientDashboard: useEffect for feedback modal triggered.");
+    console.log("ClientDashboard: contractToFinalize:", contractToFinalize);
+    console.log("ClientDashboard: isFeedbackModalOpen:", isFeedbackModalOpen);
+
     if (contractToFinalize && contractToFinalize.status === "finalized" && !isFeedbackModalOpen) {
+      console.log("ClientDashboard: Condition met to open feedback modal.");
       const provider = allProviders.find(p => p.id === contractToFinalize.providerId);
       if (provider) {
         setFeedbackData({ contract: contractToFinalize, providerName: provider.name });
         setIsFeedbackModalOpen(true);
         setContractToFinalize(null); // Clear after opening feedback
+        console.log("ClientDashboard: Feedback modal opened and contractToFinalize cleared.");
+      } else {
+        console.log("ClientDashboard: Provider not found for contractToFinalize.");
       }
+    } else {
+      console.log("ClientDashboard: Condition not met to open feedback modal.");
     }
   }, [contracts, contractToFinalize, isFeedbackModalOpen, allProviders]);
 
@@ -435,6 +445,13 @@ const ClientDashboard: React.FC = () => {
           )}
         </div>
       </div>
+      {selectedProvider && (
+        <ProviderContactModal
+          provider={selectedProvider}
+          isOpen={isContactModalOpen}
+          onClose={() => setIsContactModalOpen(false)}
+        />
+      )}
       {isCompletionModalOpen && contractToFinalize && (
         <ContractCompletionModal
           isOpen={isCompletionModalOpen}

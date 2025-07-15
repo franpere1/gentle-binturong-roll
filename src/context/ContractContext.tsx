@@ -120,6 +120,8 @@ export const ContractProvider: React.FC<ContractProviderProps> = ({ children }) 
 
         let updatedContract = { ...contract, updatedAt: Date.now() };
 
+        console.log(`ContractContext: Before action - Contract ID: ${contract.id}, Client Action: ${contract.clientAction}, Provider Action: ${contract.providerAction}, Status: ${contract.status}`);
+
         // Check if contract is already in a final state
         if (updatedContract.status === "finalized" || updatedContract.status === "cancelled" || updatedContract.status === "disputed" || updatedContract.status === "finalized_by_dispute") {
           showError("Este contrato ya ha sido finalizado, cancelado o está en disputa.");
@@ -175,6 +177,8 @@ export const ContractProvider: React.FC<ContractProviderProps> = ({ children }) 
         // 2. Determine the new status based on both parties' actions
         const { clientAction, providerAction, clientDeposited } = updatedContract;
 
+        console.log(`ContractContext: After action recorded - Client Action: ${clientAction}, Provider Action: ${providerAction}`);
+
         if (clientAction === "finalize" && providerAction === "finalize") {
           updatedContract.status = "finalized";
           const amountToProvider = updatedContract.serviceRate * (1 - updatedContract.commissionRate);
@@ -209,7 +213,7 @@ export const ContractProvider: React.FC<ContractProviderProps> = ({ children }) 
           showSuccess(`Tu acción de ${actionType === 'finalize' ? 'finalizar' : 'cancelar'} el contrato "${updatedContract.serviceTitle}" ha sido registrada. Esperando la acción de la otra parte.`);
           console.log("ContractContext: Action recorded, waiting for other party.");
         }
-
+        console.log(`ContractContext: After update - Contract ID: ${updatedContract.id}, Client Action: ${updatedContract.clientAction}, Provider Action: ${updatedContract.providerAction}, Status: ${updatedContract.status}`);
         return updatedContract;
       });
     });
