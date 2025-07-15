@@ -82,7 +82,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       showError("Este correo electrónico ya está registrado.");
       return false;
     }
-    const newUser = { ...client, id: `user-${users.length + 1}` };
+    const newUser = { ...client, id: `user-${users.length + 1}`, createdAt: Date.now() }; // Add createdAt
     setUsers((prevUsers) => [...prevUsers, newUser]);
     setCurrentUser(newUser); // Log in the new client immediately
     showSuccess("Registro de cliente exitoso. ¡Ahora estás logeado!");
@@ -94,7 +94,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       showError("Este correo electrónico ya está registrado.");
       return false;
     }
-    const newUser = { ...provider, id: `user-${users.length + 1}`, feedback: [], starRating: 0 };
+    const newUser = { ...provider, id: `user-${users.length + 1}`, feedback: [], starRating: 0, createdAt: Date.now() }; // Add createdAt
     setUsers((prevUsers) => [...prevUsers, newUser]);
     setCurrentUser(newUser); // Log in the new provider immediately
     showSuccess("Registro de proveedor exitoso. ¡Ahora estás logeado!");

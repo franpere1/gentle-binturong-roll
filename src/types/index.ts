@@ -13,6 +13,7 @@ export interface User {
   email: string;
   state: string;
   password?: string; // Password will not be stored in plain text in a real app, but for demo, it's fine.
+  createdAt: number; // Nuevo campo para la fecha de creación
 }
 
 export interface Client extends User {

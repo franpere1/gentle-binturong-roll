@@ -32,7 +32,7 @@ const ClientDashboard: React.FC = () => {
   const client = currentUser as Client;
   const [isEditing, setIsEditing] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filteredProviders, setFilteredProviders] = useState<Provider[]>([]);
+  const [displayedProviders, setDisplayedProviders] = useState<Provider[]>([]); // Cambiado a displayedProviders
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [isCompletionModalOpen, setIsCompletionModalOpen] = useState(false);
@@ -45,15 +45,25 @@ const ClientDashboard: React.FC = () => {
 
   useEffect(() => {
     const lowerCaseSearchTerm = searchTerm.toLowerCase();
-    const results = allProviders.filter(
-      (provider) =>
-        provider.name.toLowerCase().includes(lowerCaseSearchTerm) ||
-        provider.category.toLowerCase().includes(lowerCaseSearchTerm) ||
-        provider.serviceTitle.toLowerCase().includes(lowerCaseSearchTerm) ||
-        provider.serviceDescription.toLowerCase().includes(lowerCaseSearchTerm) ||
-        provider.state.toLowerCase().includes(lowerCaseSearchTerm)
-    );
-    setFilteredProviders(results);
+    let results: Provider[] = [];
+
+    if (lowerCaseSearchTerm === "") {
+      // Si no hay término de búsqueda, mostrar los 6 más recientes
+      results = [...allProviders]
+        .sort((a, b) => b.createdAt - a.createdAt) // Ordenar por fecha de creación descendente
+        .slice(0, 6); // Tomar los 6 primeros
+    } else {
+      // Si hay término de búsqueda, filtrar por él
+      results = allProviders.filter(
+        (provider) =>
+          provider.name.toLowerCase().includes(lowerCaseSearchTerm) ||
+          provider.category.toLowerCase().includes(lowerCaseSearchTerm) ||
+          provider.serviceTitle.toLowerCase().includes(lowerCaseSearchTerm) ||
+          provider.serviceDescription.toLowerCase().includes(lowerCaseSearchTerm) ||
+          provider.state.toLowerCase().includes(lowerCaseSearchTerm)
+      );
+    }
+    setDisplayedProviders(results); // Actualizar los proveedores a mostrar
   }, [searchTerm, allProviders]);
 
   const handleContactProvider = (provider: Provider) => {
@@ -202,17 +212,17 @@ const ClientDashboard: React.FC = () => {
             />
           </div>
 
-          {filteredProviders.length === 0 && searchTerm !== "" ? (
+          {displayedProviders.length === 0 && searchTerm !== "" ? (
             <p className="text-center text-gray-600 dark:text-gray-400">
               No se encontraron servicios que coincidan con tu búsqueda.
             </p>
-          ) : filteredProviders.length === 0 && searchTerm === "" ? (
+          ) : displayedProviders.length === 0 && searchTerm === "" ? (
             <p className="text-center text-gray-600 dark:text-gray-400">
               No hay proveedores registrados aún.
             </p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredProviders.map((provider) => (
+              {displayedProviders.map((provider) => (
                 <Card key={provider.id} className="flex flex-col">
                   {provider.serviceImage && (
                     <img
