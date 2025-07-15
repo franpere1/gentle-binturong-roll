@@ -95,11 +95,11 @@ const ProviderDashboard: React.FC = () => {
                     ({provider.starRating} / 5 estrellas)
                   </span>
                 </div>
-                {provider.feedback.length > 0 && (
+                {(provider.feedback || []).length > 0 && (
                   <div className="mt-4">
                     <h4 className="font-semibold mb-2">Comentarios Recientes:</h4>
                     <ul className="list-disc list-inside text-sm text-gray-600 dark:text-gray-400">
-                      {provider.feedback.slice(-3).reverse().map((f, index) => ( // Mostrar los 3 últimos comentarios
+                      {(provider.feedback || []).slice(-3).reverse().map((f, index) => ( // Mostrar los 3 últimos comentarios
                         <li key={index}>
                           <span className={`font-medium ${
                             f.type === "positive" ? "text-green-600" :
