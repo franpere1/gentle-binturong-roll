@@ -56,7 +56,7 @@ const ProviderProfileEditor: React.FC<ProviderProfileEditorProps> = ({
   const [category, setCategory] = useState<ServiceCategory | "">(provider.category);
   const [serviceTitle, setServiceTitle] = useState(provider.serviceTitle);
   const [serviceDescription, setServiceDescription] = useState(provider.serviceDescription);
-  const [serviceImage, setServiceImage] = useState(provider.serviceImage || "");
+  const [serviceImage, setServiceImage] = useState(provider.serviceImage || ""); // Changed to string for base64
   const [rate, setRate] = useState<number | ''>(provider.rate);
   const [profileImage, setProfileImage] = useState(provider.profileImage || "");
   const [openCategoryCombobox, setOpenCategoryCombobox] = useState(false); // State for combobox open/close
@@ -105,7 +105,7 @@ const ProviderProfileEditor: React.FC<ProviderProfileEditorProps> = ({
     "Técnico de aire acondicionado",
   ].sort(); // Ensure alphabetical order
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 1024 * 1024) { // 1MB limit
@@ -115,13 +115,13 @@ const ProviderProfileEditor: React.FC<ProviderProfileEditorProps> = ({
       const reader = new FileReader();
       reader.onloadend = () => {
         setProfileImage(reader.result as string);
-        showSuccess("Imagen seleccionada correctamente.");
+        showSuccess("Imagen de perfil seleccionada correctamente.");
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const handleDownloadImage = () => {
+  const handleDownloadProfileImage = () => {
     if (profileImage) {
       const link = document.createElement('a');
       link.href = profileImage;
@@ -129,9 +129,39 @@ const ProviderProfileEditor: React.FC<ProviderProfileEditorProps> = ({
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      showSuccess("Imagen descargada.");
+      showSuccess("Imagen de perfil descargada.");
     } else {
       showError("No hay imagen de perfil para descargar.");
+    }
+  };
+
+  const handleServiceImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 1024 * 1024) { // 1MB limit
+        showError("La imagen del servicio es demasiado grande. El tamaño máximo es 1MB.");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setServiceImage(reader.result as string);
+        showSuccess("Imagen de servicio seleccionada correctamente.");
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleDownloadServiceImage = () => {
+    if (serviceImage) {
+      const link = document.createElement('a');
+      link.href = serviceImage;
+      link.download = `${serviceTitle || 'service'}_image.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showSuccess("Imagen de servicio descargada.");
+    } else {
+      showError("No hay imagen de servicio para descargar.");
     }
   };
 
@@ -274,14 +304,23 @@ const ProviderProfileEditor: React.FC<ProviderProfileEditorProps> = ({
         />
       </div>
       <div>
-        <Label htmlFor="edit-service-image">URL de Imagen de Servicio (opcional)</Label>
+        <Label htmlFor="service-image-upload">Subir Imagen de Servicio (opcional, máx. 1MB)</Label>
         <Input
-          id="edit-service-image"
-          type="text"
-          value={serviceImage}
-          onChange={(e) => setServiceImage(e.target.value)}
-          placeholder="Ej: https://ejemplo.com/imagen.jpg"
+          id="service-image-upload"
+          type="file"
+          accept="image/*"
+          onChange={handleServiceImageChange}
+          className="mt-1"
         />
+        {serviceImage && (
+          <div className="mt-4 flex flex-col items-center">
+            <Label className="mb-2">Previsualización de Imagen:</Label>
+            <img src={serviceImage} alt="Previsualización de Servicio" className="w-32 h-32 object-cover rounded-md border-2 border-gray-300 dark:border-gray-600" />
+            <Button type="button" variant="outline" onClick={handleDownloadServiceImage} className="mt-4">
+              Descargar Imagen Actual
+            </Button>
+          </div>
+        )}
       </div>
       <div>
         <Label htmlFor="edit-rate">Tarifa por Servicio (USD)</Label>
@@ -302,14 +341,14 @@ const ProviderProfileEditor: React.FC<ProviderProfileEditorProps> = ({
           id="profile-image-upload"
           type="file"
           accept="image/*"
-          onChange={handleImageChange}
+          onChange={handleProfileImageChange}
           className="mt-1"
         />
         {profileImage && (
           <div className="mt-4 flex flex-col items-center">
             <Label className="mb-2">Previsualización de Imagen:</Label>
             <img src={profileImage} alt="Previsualización de Perfil" className="w-32 h-32 object-cover rounded-full border-2 border-gray-300 dark:border-gray-600" />
-            <Button type="button" variant="outline" onClick={handleDownloadImage} className="mt-4">
+            <Button type="button" variant="outline" onClick={handleDownloadProfileImage} className="mt-4">
               Descargar Imagen Actual
             </Button>
           </div>

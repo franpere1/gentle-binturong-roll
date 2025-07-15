@@ -228,7 +228,7 @@ const ProviderRegistrationForm: React.FC = () => {
   const [category, setCategory] = useState<ServiceCategory | "">("");
   const [serviceTitle, setServiceTitle] = useState("");
   const [serviceDescription, setServiceDescription] = useState("");
-  const [serviceImage, setServiceImage] = useState("");
+  const [serviceImage, setServiceImage] = useState(""); // Changed to string for base64
   const [password, setPassword] = useState("");
   const [rate, setRate] = useState<number | ''>('');
   const [profileImage, setProfileImage] = useState("");
@@ -291,9 +291,39 @@ const ProviderRegistrationForm: React.FC = () => {
       const reader = new FileReader();
       reader.onloadend = () => {
         setProfileImage(reader.result as string);
-        showSuccess("Imagen seleccionada correctamente.");
+        showSuccess("Imagen de perfil seleccionada correctamente.");
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const handleServiceImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 1024 * 1024) { // 1MB limit
+        showError("La imagen del servicio es demasiado grande. El tamaño máximo es 1MB.");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setServiceImage(reader.result as string);
+        showSuccess("Imagen de servicio seleccionada correctamente.");
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleDownloadServiceImage = () => {
+    if (serviceImage) {
+      const link = document.createElement('a');
+      link.href = serviceImage;
+      link.download = `${serviceTitle || 'service'}_image.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showSuccess("Imagen de servicio descargada.");
+    } else {
+      showError("No hay imagen de servicio para descargar.");
     }
   };
 
@@ -436,14 +466,23 @@ const ProviderRegistrationForm: React.FC = () => {
         />
       </div>
       <div>
-        <Label htmlFor="provider-service-image">URL de Imagen de Servicio (opcional)</Label>
+        <Label htmlFor="provider-service-image-upload">Subir Imagen de Servicio (opcional, máx. 1MB)</Label>
         <Input
-          id="provider-service-image"
-          type="text"
-          value={serviceImage}
-          onChange={(e) => setServiceImage(e.target.value)}
-          placeholder="Ej: https://ejemplo.com/imagen.jpg"
+          id="provider-service-image-upload"
+          type="file"
+          accept="image/*"
+          onChange={handleServiceImageChange}
+          className="mt-1"
         />
+        {serviceImage && (
+          <div className="mt-4 flex flex-col items-center">
+            <Label className="mb-2">Previsualización de Imagen:</Label>
+            <img src={serviceImage} alt="Previsualización de Servicio" className="w-32 h-32 object-cover rounded-md border-2 border-gray-300 dark:border-gray-600" />
+            <Button type="button" variant="outline" onClick={handleDownloadServiceImage} className="mt-4">
+              Descargar Imagen Actual
+            </Button>
+          </div>
+        )}
       </div>
       <div>
         <Label htmlFor="provider-rate">Tarifa por Servicio (USD)</Label>
