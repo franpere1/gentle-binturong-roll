@@ -260,7 +260,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       profileImage: null, // Default to null on registration
       password: providerData.password,
     };
-    const updatedUsers = [...users, newProvider];
+    const updatedUsers = [...users];
+    updatedUsers.push(newProvider); // Use push for clarity
     setUsers(updatedUsers);
     saveUsersToLocalStorage(updatedUsers);
     setCurrentUser(newProvider);
@@ -383,6 +384,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
+    console.error("AuthContext is undefined when useAuth is called!"); // Added for debugging
     throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
