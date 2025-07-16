@@ -195,7 +195,7 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useCa
         let contract = contracts[contractIndex]; // Use contracts state
 
         let updatedContract = { ...contract, updatedAt: Date.now() };
-        let updatePayload: Partial<Contract> = { updatedAt: Date.now() };
+        // let updatePayload: Partial<Contract> = { updatedAt: Date.now() }; // This variable is not used
 
         // --- Handle immediate cancellation for 'pending' or 'offered' contracts ---
         if (actionType === 'cancel') {
@@ -225,24 +225,34 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useCa
         }
         // --- End immediate cancellation handling ---
 
-        // --- Handle cancel dispute action (only client can initiate) ---
+        // --- Handle cancel dispute action ---
         if (actionType === 'cancel_dispute') {
           if (actorId === contract.clientId) {
             if (updatedContract.status === "disputed" && updatedContract.clientAction === "dispute") {
               updatedContract.status = "active";
               updatedContract.clientAction = "accept_offer"; // Revert client action to accepted
-              showSuccess(`Disputa para el contrato "${updatedContract.serviceTitle}" cancelada. Puedes proceder a finalizar el contrato. (Modo Demo)`);
+              showSuccess(`Disputa para el contrato "${updatedContract.serviceTitle}" cancelada por el cliente. Puedes proceder a finalizar el contrato. (Modo Demo)`);
               const newContracts = [...contracts];
               newContracts[contractIndex] = updatedContract;
               updateAndSaveContracts(newContracts);
               return;
             } else {
-              showError("No se puede cancelar la disputa en el estado actual del contrato.");
+              showError("No se puede cancelar la disputa en el estado actual del contrato o no eres el iniciador.");
               return;
             }
           } else if (actorId === contract.providerId) {
-            showError("Solo el cliente puede cancelar una disputa.");
-            return;
+            if (updatedContract.status === "disputed" && updatedContract.providerAction === "dispute") {
+              updatedContract.status = "active";
+              updatedContract.providerAction = "finalize"; // Revert provider action to finalize
+              showSuccess(`Disputa para el contrato "${updatedContract.serviceTitle}" cancelada por el proveedor. Puedes proceder a finalizar el contrato. (Modo Demo)`);
+              const newContracts = [...contracts];
+              newContracts[contractIndex] = updatedContract;
+              updateAndSaveContracts(newContracts);
+              return;
+            } else {
+              showError("No se puede cancelar la disputa en el estado actual del contrato o no eres el iniciador.");
+              return;
+            }
           }
         }
 
@@ -252,7 +262,7 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useCa
           return;
         }
 
-        // Handle dispute action (only client can initiate)
+        // Handle dispute action
         if (actionType === 'dispute') {
           if (actorId === contract.clientId) {
             if (
@@ -264,18 +274,35 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useCa
             ) {
               updatedContract.clientAction = "dispute";
               updatedContract.status = "disputed";
-              showSuccess(`Disputa iniciada para el contrato "${updatedContract.serviceTitle}". Los fondos permanecen retenidos hasta la resolución. (Modo Demo)`);
+              showSuccess(`Disputa iniciada por el cliente para el contrato "${updatedContract.serviceTitle}". Los fondos permanecen retenidos hasta la resolución. (Modo Demo)`);
               const newContracts = [...contracts];
               newContracts[contractIndex] = updatedContract;
               updateAndSaveContracts(newContracts);
               return;
             } else {
-              showError("Solo puedes iniciar una disputa en un contrato activo, con fondos depositados, y si no has tomado una acción final (finalizar/cancelar/disputar).");
+              showError("El cliente solo puede iniciar una disputa en un contrato activo, con fondos depositados, y si no ha tomado una acción final (finalizar/cancelar/disputar).");
               return;
             }
           } else if (actorId === contract.providerId) {
-            showError("Solo el cliente puede iniciar una disputa.");
-            return;
+            if (
+              updatedContract.status === "active" &&
+              updatedContract.clientDeposited &&
+              updatedContract.providerAction === "finalize" && // Provider must have finalized first
+              updatedContract.clientAction !== "finalize" &&
+              updatedContract.clientAction !== "cancel" &&
+              updatedContract.clientAction !== "dispute"
+            ) {
+              updatedContract.providerAction = "dispute"; // Provider's action becomes dispute
+              updatedContract.status = "disputed"; // Contract status becomes disputed
+              showSuccess(`Disputa iniciada por el proveedor para el contrato "${updatedContract.serviceTitle}". Los fondos permanecen retenidos hasta la resolución. (Modo Demo)`);
+              const newContracts = [...contracts];
+              newContracts[contractIndex] = updatedContract;
+              updateAndSaveContracts(newContracts);
+              return;
+            } else {
+              showError("El proveedor solo puede iniciar una disputa en un contrato activo, con fondos depositados, después de haber finalizado el servicio y si el cliente no ha finalizado, cancelado o disputado.");
+              return;
+            }
           }
         }
 
