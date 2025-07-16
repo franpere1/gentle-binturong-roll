@@ -12,7 +12,7 @@ import { showSuccess, showError } from "@/utils/toast";
 interface AuthContextType {
   currentUser: User | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<User | null>; // Changed return type
+  login: (email: string, password: string) => Promise<User | null>;
   logout: () => Promise<void>;
   registerClient: (clientData: Omit<Client, "id" | "createdAt" | "type" | "profileImage"> & { password?: string }) => Promise<boolean>;
   registerProvider: (providerData: Omit<Provider, "id" | "createdAt" | "type" | "feedback" | "starRating" | "profileImage" | "serviceImage"> & { password?: string }) => Promise<boolean>;
@@ -20,7 +20,7 @@ interface AuthContextType {
   findUserById: (id: string) => Promise<User | undefined>;
   updateUser: (user: User) => Promise<void>;
   getAllProviders: () => Promise<Provider[]>;
-  getAllUsers: () => Promise<User[]>; // New function
+  getAllUsers: () => Promise<User[]>;
   addFeedbackToProvider: (
     providerId: string,
     type: FeedbackType,
@@ -46,7 +46,7 @@ const defaultAdmin: Admin = {
   type: "admin",
   createdAt: Date.now() - 100000,
   profileImage: null,
-  password: "kilmanjaro", // Added default password
+  password: "kilmanjaro",
 };
 
 const defaultClient: Client = {
@@ -58,7 +58,7 @@ const defaultClient: Client = {
   createdAt: Date.now() - 90000,
   profileImage: null,
   phone: "0412-1234567",
-  password: "password", // Added default password
+  password: "password",
 };
 
 const defaultProvider: Provider = {
@@ -77,7 +77,7 @@ const defaultProvider: Provider = {
   rate: 45.00,
   feedback: [],
   starRating: 4,
-  password: "password", // Added default password
+  password: "password",
 };
 
 // Helper to load users from localStorage
@@ -106,11 +106,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Initialize users state with data from localStorage or defaults
   const [users, setUsers] = useState<Array<Client | Provider | Admin>>(() => {
     let initialUsers = loadUsersFromLocalStorage();
-    if (initialUsers.length === 0) {
-      initialUsers = [defaultAdmin, defaultClient, defaultProvider];
-      saveUsersToLocalStorage(initialUsers);
-    }
-    return initialUsers;
+    const defaultUsers = [defaultAdmin, defaultClient, defaultProvider];
+
+    // Create a map to track existing users by ID to avoid duplicates
+    const existingUserMap = new Map<string, Client | Provider | Admin>(
+      initialUsers.map(user => [user.id, user])
+    );
+
+    // Add default users if they don't already exist in the loaded data
+    defaultUsers.forEach(defaultUser => {
+      if (!existingUserMap.has(defaultUser.id)) {
+        existingUserMap.set(defaultUser.id, defaultUser);
+      }
+    });
+
+    // Convert map back to array
+    const finalUsers = Array.from(existingUserMap.values());
+    saveUsersToLocalStorage(finalUsers); // Save the merged list
+    return finalUsers;
   });
 
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -127,7 +140,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     }
     setIsLoading(false);
-  }, [users]); // Depend on 'users' state to ensure it's updated
+  }, [users]);
 
   const findUserByEmail = useCallback(async (email: string): Promise<User | undefined> => {
     return users.find(user => user.email === email);
@@ -137,7 +150,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return users.find(user => user.id === id);
   }, [users]);
 
-  const login = async (email: string, password: string): Promise<User | null> => { // Changed return type
+  const login = async (email: string, password: string): Promise<User | null> => {
     setIsLoading(true);
     const user = users.find(u => u.email === email);
 
@@ -147,7 +160,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         localStorage.setItem(LOCAL_STORAGE_CURRENT_USER_ID_KEY, user.id);
         showSuccess(`Bienvenido, ${user.name}! (Modo Demo)`);
         setIsLoading(false);
-        return user; // Return the user object on success
+        return user;
       } else {
         showError("Credenciales incorrectas.");
       }
@@ -155,7 +168,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       showError("Usuario no encontrado.");
     }
     setIsLoading(false);
-    return null; // Return null on failure
+    return null;
   };
 
   const logout = async () => {
@@ -251,7 +264,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return users.filter((user): user is Provider => user.type === "provider");
   };
 
-  const getAllUsers = async (): Promise<User[]> => { // New function implementation
+  const getAllUsers = async (): Promise<User[]> => {
     return users;
   };
 
@@ -311,7 +324,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         findUserById,
         updateUser,
         getAllProviders,
-        getAllUsers, // Added to context value
+        getAllUsers,
         addFeedbackToProvider,
       }}
     >
