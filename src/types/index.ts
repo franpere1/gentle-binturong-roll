@@ -41,13 +41,15 @@ export type ServiceCategory =
   | "Servicios electrónica"
   | "Técnico de aire acondicionado";
 
+export type ImageSource = string | File | null | undefined; // string for URL, File for new upload, null/undefined for no image
+
 export interface User {
   id: string; // This will now be the Supabase Auth user ID
   name: string;
   email: string;
   state: string;
   createdAt: number;
-  profileImage?: string;
+  profileImage?: ImageSource;
   type: "client" | "provider" | "admin";
 }
 
@@ -80,7 +82,7 @@ export interface Provider extends User {
   category: ServiceCategory;
   serviceTitle: string;
   serviceDescription: string;
-  serviceImage?: string;
+  serviceImage?: ImageSource;
   rate: number;
   feedback: Feedback[];
   starRating: number;

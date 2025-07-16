@@ -6,17 +6,18 @@ import React, {
   useEffect,
   useCallback,
 } from "react";
-import { Client, Provider, User, Feedback, FeedbackType, Admin } from "@/types";
+import { Client, Provider, User, Feedback, FeedbackType, Admin, ImageSource } from "@/types";
 import { showSuccess, showError } from "@/utils/toast";
 import { supabase } from "@/lib/supabase";
+import { uploadImage, deleteImage } from "@/utils/imageUpload"; // Import new utilities
 
 interface AuthContextType {
   currentUser: User | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  registerClient: (clientData: Omit<Client, "id" | "createdAt" | "type">) => Promise<boolean>;
-  registerProvider: (providerData: Omit<Provider, "id" | "createdAt" | "type" | "feedback" | "starRating">) => Promise<boolean>;
+  registerClient: (clientData: Omit<Client, "id" | "createdAt" | "type" | "profileImage"> & { profileImage?: File | null }) => Promise<boolean>;
+  registerProvider: (providerData: Omit<Provider, "id" | "createdAt" | "type" | "feedback" | "starRating" | "profileImage" | "serviceImage"> & { profileImage?: File | null, serviceImage?: File | null }) => Promise<boolean>;
   findUserByEmail: (email: string) => Promise<User | undefined>;
   findUserById: (id: string) => Promise<User | undefined>;
   updateUser: (user: User) => Promise<void>;
@@ -167,6 +168,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           // Insert admin profile into public.users
           const { error: profileError } = await supabase.from('users').insert([
             {
+              id: authData.user.id, // Explicitly set ID for admin
               name: "Admin",
               email: "admin@admin.com",
               state: "Distrito Capital",
@@ -223,7 +225,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setIsLoading(false);
   };
 
-  const registerClient = async (clientData: Omit<Client, "id" | "createdAt" | "type">): Promise<boolean> => {
+  const registerClient = async (clientData: Omit<Client, "id" | "createdAt" | "type" | "profileImage"> & { profileImage?: File | null }): Promise<boolean> => {
     setIsLoading(true);
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email: clientData.email,
@@ -237,15 +239,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
 
     if (authData.user) {
+      let profileImageUrl: string | null = null;
+      if (clientData.profileImage) {
+        profileImageUrl = await uploadImage(clientData.profileImage, `profiles/${authData.user.id}`);
+        if (!profileImageUrl) {
+          await supabase.auth.admin.deleteUser(authData.user.id); // Clean up auth user if image upload fails
+          setIsLoading(false);
+          return false;
+        }
+      }
+
       const { error: profileError } = await supabase.from('users').insert([
         {
+          id: authData.user.id,
           name: clientData.name,
           email: clientData.email,
           state: clientData.state,
           phone: clientData.phone,
           type: "client",
           created_at: Date.now(),
-          profile_image: clientData.profileImage,
+          profile_image: profileImageUrl,
         }
       ]);
 
@@ -254,6 +267,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         showError("Error al registrar cliente. Inténtalo de nuevo.");
         // Optionally, delete the auth user if profile creation fails
         await supabase.auth.admin.deleteUser(authData.user.id);
+        if (profileImageUrl) await deleteImage(profileImageUrl); // Clean up uploaded image
         setIsLoading(false);
         return false;
       }
@@ -270,7 +284,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return false;
   };
 
-  const registerProvider = async (providerData: Omit<Provider, "id" | "createdAt" | "type" | "feedback" | "starRating">): Promise<boolean> => {
+  const registerProvider = async (providerData: Omit<Provider, "id" | "createdAt" | "type" | "feedback" | "starRating" | "profileImage" | "serviceImage"> & { profileImage?: File | null, serviceImage?: File | null }): Promise<boolean> => {
     setIsLoading(true);
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email: providerData.email,
@@ -284,8 +298,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
 
     if (authData.user) {
+      let profileImageUrl: string | null = null;
+      if (providerData.profileImage) {
+        profileImageUrl = await uploadImage(providerData.profileImage, `profiles/${authData.user.id}`);
+        if (!profileImageUrl) {
+          await supabase.auth.admin.deleteUser(authData.user.id);
+          setIsLoading(false);
+          return false;
+        }
+      }
+
+      let serviceImageUrl: string | null = null;
+      if (providerData.serviceImage) {
+        serviceImageUrl = await uploadImage(providerData.serviceImage, `services/${authData.user.id}`);
+        if (!serviceImageUrl) {
+          await supabase.auth.admin.deleteUser(authData.user.id);
+          if (profileImageUrl) await deleteImage(profileImageUrl); // Clean up profile image if service image fails
+          setIsLoading(false);
+          return false;
+        }
+      }
+
       const { error: profileError } = await supabase.from('users').insert([
         {
+          id: authData.user.id,
           name: providerData.name,
           email: providerData.email,
           state: providerData.state,
@@ -294,20 +330,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           category: providerData.category,
           service_title: providerData.serviceTitle,
           service_description: providerData.serviceDescription,
-          service_image: providerData.serviceImage,
+          service_image: serviceImageUrl,
           rate: providerData.rate,
           feedback: [],
           star_rating: 0,
           created_at: Date.now(),
-          profile_image: providerData.profileImage,
+          profile_image: profileImageUrl,
         }
       ]);
 
       if (profileError) {
         console.error("Error inserting provider profile:", profileError);
         showError("Error al registrar proveedor. Inténtalo de nuevo.");
-        // Optionally, delete the auth user if profile creation fails
         await supabase.auth.admin.deleteUser(authData.user.id);
+        if (profileImageUrl) await deleteImage(profileImageUrl);
+        if (serviceImageUrl) await deleteImage(serviceImageUrl);
         setIsLoading(false);
         return false;
       }
@@ -326,16 +363,73 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const updateUser = async (updatedUser: User) => {
     setIsLoading(true);
+
+    let profileImageUrl: string | null = null;
+    // Check if profileImage is a new File object
+    if (updatedUser.profileImage instanceof File) {
+      // Delete old image if it exists and is a URL (not a new File)
+      if (currentUser?.profileImage && typeof currentUser.profileImage === 'string') {
+        await deleteImage(currentUser.profileImage);
+      }
+      const url = await uploadImage(updatedUser.profileImage, `profiles/${updatedUser.id}`);
+      if (url) {
+        profileImageUrl = url;
+      } else {
+        showError("Error al subir la imagen de perfil.");
+        setIsLoading(false);
+        return;
+      }
+    } else if (updatedUser.profileImage === null) {
+      // User explicitly removed profile image, delete old one if it existed
+      if (currentUser?.profileImage && typeof currentUser.profileImage === 'string') {
+        await deleteImage(currentUser.profileImage);
+      }
+      profileImageUrl = null;
+    } else if (typeof updatedUser.profileImage === 'string') {
+      // Existing URL, no change
+      profileImageUrl = updatedUser.profileImage;
+    } else {
+      // Undefined or other case, keep current or null
+      profileImageUrl = (currentUser?.profileImage && typeof currentUser.profileImage === 'string') ? currentUser.profileImage : null;
+    }
+
+    let serviceImageUrl: string | null = null;
+    if (updatedUser.type === 'provider') {
+      const providerUser = updatedUser as Provider;
+      if (providerUser.serviceImage instanceof File) {
+        if (currentUser?.type === 'provider' && currentUser.serviceImage && typeof currentUser.serviceImage === 'string') {
+          await deleteImage(currentUser.serviceImage);
+        }
+        const url = await uploadImage(providerUser.serviceImage, `services/${updatedUser.id}`);
+        if (url) {
+          serviceImageUrl = url;
+        } else {
+          showError("Error al subir la imagen de servicio.");
+          setIsLoading(false);
+          return;
+        }
+      } else if (providerUser.serviceImage === null) {
+        if (currentUser?.type === 'provider' && currentUser.serviceImage && typeof currentUser.serviceImage === 'string') {
+          await deleteImage(currentUser.serviceImage);
+        }
+        serviceImageUrl = null;
+      } else if (typeof providerUser.serviceImage === 'string') {
+        serviceImageUrl = providerUser.serviceImage;
+      } else {
+        serviceImageUrl = (currentUser?.type === 'provider' && currentUser.serviceImage && typeof currentUser.serviceImage === 'string') ? currentUser.serviceImage : null;
+      }
+    }
+
     const { error } = await supabase.from('users').update({
       name: updatedUser.name,
       email: updatedUser.email, // Email update should ideally go through Supabase Auth
       state: updatedUser.state,
       phone: (updatedUser as Client).phone || (updatedUser as Provider).phone || null,
-      profile_image: updatedUser.profileImage || null,
+      profile_image: profileImageUrl, // Use the uploaded URL or null
       category: (updatedUser as Provider).category || null,
       service_title: (updatedUser as Provider).serviceTitle || null,
       service_description: (updatedUser as Provider).serviceDescription || null,
-      service_image: (updatedUser as Provider).serviceImage || null,
+      service_image: serviceImageUrl, // Use the uploaded URL or null
       rate: (updatedUser as Provider).rate || null,
       feedback: (updatedUser as Provider).feedback || [],
       star_rating: (updatedUser as Provider).starRating || 0,
@@ -345,8 +439,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.error("Error updating user:", error);
       showError("Error al actualizar la información.");
     } else {
-      setCurrentUser(updatedUser);
-      showSuccess("Información actualizada correctamente.");
+      // Re-fetch user profile to ensure state is consistent with DB (especially for image URLs)
+      const updatedUserProfile = await fetchUserProfile(updatedUser.id);
+      if (updatedUserProfile) {
+        setCurrentUser(updatedUserProfile);
+        showSuccess("Información actualizada correctamente.");
+      } else {
+        showError("Información actualizada, pero no se pudo recargar el perfil.");
+      }
     }
     setIsLoading(false);
   };

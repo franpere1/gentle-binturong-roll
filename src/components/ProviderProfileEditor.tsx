@@ -35,7 +35,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, XCircle } from "lucide-react"; // Import XCircle for clearing image
 import { cn } from "@/lib/utils";
 
 interface ProviderProfileEditorProps {
@@ -57,9 +57,11 @@ const ProviderProfileEditor: React.FC<ProviderProfileEditorProps> = ({
   const [category, setCategory] = useState<ServiceCategory | "">(provider.category);
   const [serviceTitle, setServiceTitle] = useState(provider.serviceTitle);
   const [serviceDescription, setServiceDescription] = useState(provider.serviceDescription);
-  const [serviceImage, setServiceImage] = useState(provider.serviceImage || "");
+  const [serviceImageFile, setServiceImageFile] = useState<File | null>(null);
+  const [serviceImagePreview, setServiceImagePreview] = useState<string | null>(provider.serviceImage || null);
   const [rate, setRate] = useState<number | ''>(provider.rate);
-  const [profileImage, setProfileImage] = useState(provider.profileImage || "");
+  const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
+  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(provider.profileImage || null);
   const [openCategoryCombobox, setOpenCategoryCombobox] = useState(false);
 
   // Update local state if currentUser changes (e.g., after a successful update)
@@ -72,9 +74,11 @@ const ProviderProfileEditor: React.FC<ProviderProfileEditorProps> = ({
       setCategory(currentUser.category);
       setServiceTitle(currentUser.serviceTitle);
       setServiceDescription(currentUser.serviceDescription);
-      setServiceImage(currentUser.serviceImage || "");
+      setServiceImagePreview(currentUser.serviceImage || null);
+      setServiceImageFile(null);
       setRate(currentUser.rate);
-      setProfileImage(currentUser.profileImage || "");
+      setProfileImagePreview(currentUser.profileImage || null);
+      setProfileImageFile(null);
     }
   }, [currentUser]);
 
@@ -94,29 +98,24 @@ const ProviderProfileEditor: React.FC<ProviderProfileEditorProps> = ({
     if (file) {
       if (file.size > 1024 * 1024) {
         showError("La imagen es demasiado grande. El tamaño máximo es 1MB.");
+        setProfileImageFile(null);
+        setProfileImagePreview(provider.profileImage || null);
         return;
       }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfileImage(reader.result as string);
-        showSuccess("Imagen de perfil seleccionada correctamente.");
-      };
-      reader.readAsDataURL(file);
+      setProfileImageFile(file);
+      setProfileImagePreview(URL.createObjectURL(file));
+      showSuccess("Imagen de perfil seleccionada correctamente.");
+    } else {
+      setProfileImageFile(null);
+      setProfileImagePreview(provider.profileImage || null);
     }
   };
 
-  const handleDownloadProfileImage = () => {
-    if (profileImage) {
-      const link = document.createElement('a');
-      link.href = profileImage;
-      link.download = `${name}_profile_image.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      showSuccess("Imagen de perfil descargada.");
-    } else {
-      showError("No hay imagen de perfil para descargar.");
-    }
+  const handleClearProfileImage = () => {
+    setProfileImageFile(null);
+    setProfileImagePreview(null);
+    const input = document.getElementById("profile-image-upload") as HTMLInputElement;
+    if (input) input.value = "";
   };
 
   const handleServiceImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -124,29 +123,24 @@ const ProviderProfileEditor: React.FC<ProviderProfileEditorProps> = ({
     if (file) {
       if (file.size > 1024 * 1024) {
         showError("La imagen del servicio es demasiado grande. El tamaño máximo es 1MB.");
+        setServiceImageFile(null);
+        setServiceImagePreview(provider.serviceImage || null);
         return;
       }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setServiceImage(reader.result as string);
-        showSuccess("Imagen de servicio seleccionada correctamente.");
-      };
-      reader.readAsDataURL(file);
+      setServiceImageFile(file);
+      setServiceImagePreview(URL.createObjectURL(file));
+      showSuccess("Imagen de servicio seleccionada correctamente.");
+    } else {
+      setServiceImageFile(null);
+      setServiceImagePreview(provider.serviceImage || null);
     }
   };
 
-  const handleDownloadServiceImage = () => {
-    if (serviceImage) {
-      const link = document.createElement('a');
-      link.href = serviceImage;
-      link.download = `${serviceTitle || 'service'}_image.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      showSuccess("Imagen de servicio descargada.");
-    } else {
-      showError("No hay imagen de servicio para descargar.");
-    }
+  const handleClearServiceImage = () => {
+    setServiceImageFile(null);
+    setServiceImagePreview(null);
+    const input = document.getElementById("service-image-upload") as HTMLInputElement;
+    if (input) input.value = "";
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -174,9 +168,9 @@ const ProviderProfileEditor: React.FC<ProviderProfileEditorProps> = ({
       category: category as ServiceCategory,
       serviceTitle,
       serviceDescription,
-      serviceImage,
+      serviceImage: serviceImageFile || serviceImagePreview, // Pass the File, or existing URL, or null
       rate: Number(rate),
-      profileImage,
+      profileImage: profileImageFile || profileImagePreview, // Pass the File, or existing URL, or null
     };
 
     await updateUser(updatedProvider);
@@ -213,151 +207,163 @@ const ProviderProfileEditor: React.FC<ProviderProfileEditorProps> = ({
             <SelectValue placeholder="Selecciona un estado" />
           </SelectTrigger>
           <SelectContent>
-            {VENEZUELAN_STATES.map((s) => (
-              <SelectItem key={s} value={s}>
-                {s}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div>
-        <Label htmlFor="edit-phone">Número de Teléfono</Label>
-        <Input
-          id="edit-phone"
-          type="tel"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          placeholder="Ej: 0412-1234567"
-          required
-        />
-      </div>
-      <div>
-        <Label htmlFor="edit-category">Categoría del Servicio</Label>
-        <Popover open={openCategoryCombobox} onOpenChange={setOpenCategoryCombobox}>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              role="combobox"
-              aria-expanded={openCategoryCombobox}
-              className="w-full justify-between"
-            >
-              {category
-                ? serviceCategories.find((c) => c === category)
-                : "Selecciona una categoría..."}
-              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-            <Command>
-              <CommandInput placeholder="Buscar categoría..." />
-              <CommandList>
-                <CommandEmpty>No se encontró categoría.</CommandEmpty>
-                <CommandGroup>
-                  {serviceCategories.map((cat) => (
-                    <CommandItem
-                      key={cat}
-                      value={cat}
-                      onSelect={(currentValue) => {
-                        setCategory(currentValue === category ? "" : (currentValue as ServiceCategory));
-                        setOpenCategoryCombobox(false);
-                      }}
-                    >
-                      <Check
-                        className={cn(
-                          "mr-2 h-4 w-4",
-                          category === cat ? "opacity-100" : "opacity-0"
-                        )}
-                      />
-                      {cat}
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              </CommandList>
-            </Command>
-          </PopoverContent>
-        </Popover>
-      </div>
-      <div>
-        <Label htmlFor="edit-service-title">Título del Servicio</Label>
-        <Input
-          id="edit-service-title"
-          type="text"
-          value={serviceTitle}
-          onChange={(e) => setServiceTitle(e.target.value)}
-          placeholder="Ej: Plomero a domicilio"
-          required
-        />
-      </div>
-      <div>
-        <Label htmlFor="edit-service-description">Descripción Breve (máx. 50 caracteres)</Label>
-        <Textarea
-          id="edit-service-description"
-          value={serviceDescription}
-          onChange={(e) => setServiceDescription(e.target.value)}
-          maxLength={50}
-          required
-        />
-      </div>
-      <div>
-        <Label htmlFor="service-image-upload">Subir Imagen de Servicio (opcional, máx. 1MB)</Label>
-        <Input
-          id="service-image-upload"
-          type="file"
-          accept="image/*"
-          onChange={handleServiceImageChange}
-          className="mt-1"
-        />
-        {serviceImage && (
-          <div className="mt-4 flex flex-col items-center">
-            <Label className="mb-2">Previsualización de Imagen:</Label>
-            <img src={serviceImage} alt="Previsualización de Servicio" className="w-32 h-32 object-cover rounded-md border-2 border-gray-300 dark:border-gray-600" />
-            <Button type="button" variant="outline" onClick={handleDownloadServiceImage} className="mt-4">
-              Descargar Imagen Actual
-            </Button>
+                {VENEZUELAN_STATES.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {s}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-        )}
-      </div>
-      <div>
-        <Label htmlFor="edit-rate">Tarifa por Servicio (USD)</Label>
-        <Input
-          id="edit-rate"
-          type="number"
-          value={rate}
-          onChange={(e) => setRate(parseFloat(e.target.value) || '')}
-          placeholder="Ej: 50"
-          required
-          min="0"
-          step="0.01"
-        />
-      </div>
-      <div>
-        <Label htmlFor="profile-image-upload">Subir Imagen de Perfil (máx. 1MB)</Label>
-        <Input
-          id="profile-image-upload"
-          type="file"
-          accept="image/*"
-          onChange={handleProfileImageChange}
-          className="mt-1"
-        />
-        {profileImage && (
-          <div className="mt-4 flex flex-col items-center">
-            <Label className="mb-2">Previsualización de Imagen:</Label>
-            <img src={profileImage} alt="Previsualización de Perfil" className="w-32 h-32 object-cover rounded-full border-2 border-gray-300 dark:border-gray-600" />
-            <Button type="button" variant="outline" onClick={handleDownloadProfileImage} className="mt-4">
-              Descargar Imagen Actual
-            </Button>
+          <div>
+            <Label htmlFor="edit-phone">Número de Teléfono</Label>
+            <Input
+              id="edit-phone"
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="Ej: 0412-1234567"
+              required
+            />
           </div>
-        )}
-      </div>
-      <div className="flex justify-end space-x-2 mt-6">
-        <Button type="button" variant="outline" onClick={onCancel}>
-          Cancelar
-        </Button>
-        <Button type="submit">Guardar Cambios</Button>
-      </div>
-    </form>
-  );
-};
+          <div>
+            <Label htmlFor="edit-category">Categoría del Servicio</Label>
+            <Popover open={openCategoryCombobox} onOpenChange={setOpenCategoryCombobox}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={openCategoryCombobox}
+                  className="w-full justify-between"
+                >
+                  {category
+                    ? serviceCategories.find((c) => c === category)
+                    : "Selecciona una categoría..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                <Command>
+                  <CommandInput placeholder="Buscar categoría..." />
+                  <CommandList>
+                    <CommandEmpty>No se encontró categoría.</CommandEmpty>
+                    <CommandGroup>
+                      {serviceCategories.map((cat) => (
+                        <CommandItem
+                          key={cat}
+                          value={cat}
+                          onSelect={(currentValue) => {
+                            setCategory(currentValue === category ? "" : (currentValue as ServiceCategory));
+                            setOpenCategoryCombobox(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              category === cat ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          {cat}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
+          <div>
+            <Label htmlFor="edit-service-title">Título del Servicio</Label>
+            <Input
+              id="edit-service-title"
+              type="text"
+              value={serviceTitle}
+              onChange={(e) => setServiceTitle(e.target.value)}
+              placeholder="Ej: Plomero a domicilio"
+              required
+            />
+          </div>
+          <div>
+            <Label htmlFor="edit-service-description">Descripción Breve (máx. 50 caracteres)</Label>
+            <Textarea
+              id="edit-service-description"
+              value={serviceDescription}
+              onChange={(e) => setServiceDescription(e.target.value)}
+              maxLength={50}
+              required
+            />
+          </div>
+          <div>
+            <Label htmlFor="service-image-upload">Subir Imagen de Servicio (opcional, máx. 1MB)</Label>
+            <Input
+              id="service-image-upload"
+              type="file"
+              accept="image/*"
+              onChange={handleServiceImageChange}
+              className="mt-1"
+            />
+            {serviceImagePreview && (
+              <div className="mt-4 flex flex-col items-center relative">
+                <Label className="mb-2">Previsualización de Imagen:</Label>
+                <img src={serviceImagePreview} alt="Previsualización de Servicio" className="w-32 h-32 object-cover rounded-md border-2 border-gray-300 dark:border-gray-600" />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleClearServiceImage}
+                  className="absolute top-0 right-0 -mt-2 -mr-2 rounded-full bg-white dark:bg-gray-700 text-red-500 hover:text-red-700"
+                >
+                  <XCircle className="h-5 w-5" />
+                </Button>
+              </div>
+            )}
+          </div>
+          <div>
+            <Label htmlFor="edit-rate">Tarifa por Servicio (USD)</Label>
+            <Input
+              id="edit-rate"
+              type="number"
+              value={rate}
+              onChange={(e) => setRate(parseFloat(e.target.value) || '')}
+              placeholder="Ej: 50"
+              required
+              min="0"
+              step="0.01"
+            />
+          </div>
+          <div>
+            <Label htmlFor="profile-image-upload">Subir Imagen de Perfil (máx. 1MB)</Label>
+            <Input
+              id="profile-image-upload"
+              type="file"
+              accept="image/*"
+              onChange={handleProfileImageChange}
+              className="mt-1"
+            />
+            {profileImagePreview && (
+              <div className="mt-4 flex flex-col items-center relative">
+                <Label className="mb-2">Previsualización de Imagen:</Label>
+                <img src={profileImagePreview} alt="Previsualización de Perfil" className="w-32 h-32 object-cover rounded-full border-2 border-gray-300 dark:border-gray-600" />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleClearProfileImage}
+                  className="absolute top-0 right-0 -mt-2 -mr-2 rounded-full bg-white dark:bg-gray-700 text-red-500 hover:text-red-700"
+                >
+                  <XCircle className="h-5 w-5" />
+                </Button>
+              </div>
+            )}
+          </div>
+          <div className="flex justify-end space-x-2 mt-6">
+            <Button type="button" variant="outline" onClick={onCancel}>
+              Cancelar
+            </Button>
+            <Button type="submit">Guardar Cambios</Button>
+          </div>
+        </form>
+      );
+    };
 
-export default ProviderProfileEditor;
+    export default ProviderProfileEditor;
