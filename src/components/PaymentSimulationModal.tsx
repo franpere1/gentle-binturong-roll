@@ -110,7 +110,7 @@ const PaymentSimulationModal: React.FC<PaymentSimulationModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-center gap-2">
             <Lock className="h-5 w-5 text-green-600" />
