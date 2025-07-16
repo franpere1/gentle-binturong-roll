@@ -31,7 +31,7 @@ import React from "react";
             <div className="text-gray-500 dark:text-gray-400">Cargando usuario...</div>
           ) : currentUser ? (
             <div className="flex items-center space-x-4">
-              <span className="text-gray-700 dark:text-gray-300">
+              <span className="text-foreground dark:text-foreground">
                 Hola, {currentUser.name} ({currentUser.type === "client" ? "Cliente" : currentUser.type === "provider" ? "Proveedor" : "Administrador"})
               </span>
               <Button onClick={handleLogout} variant="outline">

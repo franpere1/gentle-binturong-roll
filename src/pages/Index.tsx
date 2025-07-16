@@ -29,10 +29,10 @@ const Index = () => {
       <Header />
       <div className="flex-grow flex items-center justify-center bg-gray-100 dark:bg-gray-900">
         <div className="text-center p-4">
-          <h1 className="text-4xl font-bold mb-4 text-gray-800 dark:text-gray-100">
+          <h1 className="text-4xl font-bold mb-4 text-foreground dark:text-foreground">
             {isLoading ? "Cargando..." : "Cargando 'TE LO HAGO'... "}
           </h1>
-          <p className="text-xl text-gray-600 dark:text-gray-300">
+          <p className="text-xl text-foreground dark:text-foreground">
             {isLoading ? "Por favor espera." : "Redirigiendo a la página de inicio de sesión o a tu dashboard."}
           </p>
         </div>

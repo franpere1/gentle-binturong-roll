@@ -41,8 +41,8 @@ const Auth: React.FC = () => {
     <div className="min-h-screen flex flex-col">
       <Header />
       <div className="flex-grow flex items-center justify-center bg-gray-100 dark:bg-gray-900 p-4">
-        <div className="w-full max-w-md bg-blue-100 dark:bg-gray-800 p-8 rounded-lg shadow-md">
-          <h2 className="text-2xl font-bold text-center mb-6 text-gray-800 dark:text-gray-100">
+        <div className="w-full max-w-md bg-card dark:bg-gray-800 p-8 rounded-lg shadow-md">
+          <h2 className="text-2xl font-bold text-center mb-6 text-foreground dark:text-foreground">
             Bienvenido a TE LO HAGO
           </h2>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -71,12 +71,12 @@ const Auth: React.FC = () => {
 const LoginForm: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const { login } = useAuth(); // No need to destructure currentUser here
+  const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const loggedInUser = await login(email, password); // Get the user object directly
+    const loggedInUser = await login(email, password);
     if (loggedInUser) {
       if (loggedInUser.type === "client") {
         navigate("/client-dashboard");
@@ -137,7 +137,7 @@ const ClientRegistrationForm: React.FC = () => {
       password,
     });
     if (success) {
-      navigate("/client-dashboard"); // Navigate after successful registration and login
+      navigate("/client-dashboard");
     }
   };
 
@@ -259,7 +259,7 @@ const ProviderRegistrationForm: React.FC = () => {
       rate: Number(rate),
     });
     if (success) {
-      navigate("/provider-dashboard"); // Navigate after successful registration and login
+      navigate("/provider-dashboard");
     }
   };
 

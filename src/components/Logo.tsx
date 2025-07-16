@@ -12,7 +12,7 @@ const Logo: React.FC<LogoProps> = ({ className }) => {
         <Handshake className="h-6 w-6 text-orange-500" />
         <Wrench className="h-3 w-3 text-blue-400 absolute bottom-0 right-0 transform translate-x-1 translate-y-1" />
       </div>
-      <span className="font-sans text-xl font-semibold text-gray-800 dark:text-gray-100">
+      <span className="font-sans text-xl font-semibold text-foreground dark:text-foreground">
         TE LO HAGO
       </span>
     </div>

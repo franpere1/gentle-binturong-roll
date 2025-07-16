@@ -4,17 +4,17 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --background: 210 29% 95%; /* #EDF2F7 - Gris azulado claro */
+    --foreground: 216 43% 28%; /* #2A4365 - Azul oscuro */
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card: 210 29% 95%; /* #EDF2F7 - Match background */
+    --card-foreground: 216 43% 28%; /* #2A4365 - Match foreground */
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover: 210 29% 95%; /* #EDF2F7 - Match background */
+    --popover-foreground: 216 43% 28%; /* #2A4365 - Match foreground */
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 0 61% 48%; /* #C53030 - Rojo oscuro */
+    --primary-foreground: 210 40% 98%; /* Off-white for contrast on primary */
 
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
@@ -61,8 +61,8 @@
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 0 61% 48%; /* #C53030 - Rojo oscuro for dark mode primary buttons */
+    --primary-foreground: 210 40% 98%; /* Off-white for contrast on primary */
 
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
