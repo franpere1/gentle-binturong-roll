@@ -41,7 +41,7 @@ export type ServiceCategory =
   | "Servicios electrónica"
   | "Técnico de aire acondicionado";
 
-export type ImageSource = string | File | null | undefined; // string for URL, File for new upload, null/undefined for no image
+export type ImageSource = string | null | undefined; // string for URL, null/undefined for no image
 
 export interface User {
   id: string; // This will now be the Supabase Auth user ID

@@ -31,7 +31,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Check, ChevronsUpDown, XCircle } from "lucide-react"; // Import XCircle for clearing image
+import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const Auth: React.FC = () => {
@@ -115,36 +115,9 @@ const ClientRegistrationForm: React.FC = () => {
   const [state, setState] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
-  const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
-  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
 
   const { registerClient } = useAuth();
   const navigate = useNavigate();
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 1024 * 1024) { // 1MB limit
-        showError("La imagen es demasiado grande. El tamaño máximo es 1MB.");
-        setProfileImageFile(null);
-        setProfileImagePreview(null);
-        return;
-      }
-      setProfileImageFile(file);
-      setProfileImagePreview(URL.createObjectURL(file)); // For immediate preview
-      showSuccess("Imagen seleccionada correctamente.");
-    } else {
-      setProfileImageFile(null);
-      setProfileImagePreview(null);
-    }
-  };
-
-  const handleClearProfileImage = () => {
-    setProfileImageFile(null);
-    setProfileImagePreview(null);
-    const input = document.getElementById("client-profile-image") as HTMLInputElement;
-    if (input) input.value = ""; // Clear the file input
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -154,7 +127,6 @@ const ClientRegistrationForm: React.FC = () => {
       state,
       phone,
       password,
-      profileImage: profileImageFile, // Pass the File object
     });
     if (success) {
       navigate("/client-dashboard"); // Navigate after successful registration and login
@@ -210,31 +182,6 @@ const ClientRegistrationForm: React.FC = () => {
         />
       </div>
       <div>
-        <Label htmlFor="client-profile-image">Subir Imagen de Perfil (opcional, máx. 1MB)</Label>
-        <Input
-          id="client-profile-image"
-          type="file"
-          accept="image/*"
-          onChange={handleImageChange}
-          className="mt-1"
-        />
-        {profileImagePreview && (
-          <div className="mt-4 flex flex-col items-center relative">
-            <Label className="mb-2">Previsualización de Imagen:</Label>
-            <img src={profileImagePreview} alt="Previsualización de Perfil" className="w-24 h-24 object-cover rounded-full border-2 border-gray-300 dark:border-gray-600" />
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={handleClearProfileImage}
-              className="absolute top-0 right-0 -mt-2 -mr-2 rounded-full bg-white dark:bg-gray-700 text-red-500 hover:text-red-700"
-            >
-              <XCircle className="h-5 w-5" />
-            </Button>
-          </div>
-        )}
-      </div>
-      <div>
         <Label htmlFor="client-password">Contraseña</Label>
         <Input
           id="client-password"
@@ -258,12 +205,8 @@ const ProviderRegistrationForm: React.FC = () => {
   const [category, setCategory] = useState<ServiceCategory | "">("");
   const [serviceTitle, setServiceTitle] = useState("");
   const [serviceDescription, setServiceDescription] = useState("");
-  const [serviceImageFile, setServiceImageFile] = useState<File | null>(null);
-  const [serviceImagePreview, setServiceImagePreview] = useState<string | null>(null);
   const [password, setPassword] = useState("");
   const [rate, setRate] = useState<number | ''>('');
-  const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
-  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
   const [phone, setPhone] = useState("");
   const [openCategoryCombobox, setOpenCategoryCombobox] = useState(false);
 
@@ -280,56 +223,6 @@ const ProviderRegistrationForm: React.FC = () => {
     "Plomero", "Repostero", "Servicios de sistemas", "Servicios digitales", "Servicios electrónica",
     "Técnico de aire acondicionado",
   ].sort();
-
-  const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 1024 * 1024) {
-        showError("La imagen es demasiado grande. El tamaño máximo es 1MB.");
-        setProfileImageFile(null);
-        setProfileImagePreview(null);
-        return;
-      }
-      setProfileImageFile(file);
-      setProfileImagePreview(URL.createObjectURL(file));
-      showSuccess("Imagen de perfil seleccionada correctamente.");
-    } else {
-      setProfileImageFile(null);
-      setProfileImagePreview(null);
-    }
-  };
-
-  const handleClearProfileImage = () => {
-    setProfileImageFile(null);
-    setProfileImagePreview(null);
-    const input = document.getElementById("provider-profile-image") as HTMLInputElement;
-    if (input) input.value = "";
-  };
-
-  const handleServiceImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 1024 * 1024) {
-        showError("La imagen del servicio es demasiado grande. El tamaño máximo es 1MB.");
-        setServiceImageFile(null);
-        setServiceImagePreview(null);
-        return;
-      }
-      setServiceImageFile(file);
-      setServiceImagePreview(URL.createObjectURL(file));
-      showSuccess("Imagen de servicio seleccionada correctamente.");
-    } else {
-      setServiceImageFile(null);
-      setServiceImagePreview(null);
-    }
-  };
-
-  const handleClearServiceImage = () => {
-    setServiceImageFile(null);
-    setServiceImagePreview(null);
-    const input = document.getElementById("provider-service-image-upload") as HTMLInputElement;
-    if (input) input.value = "";
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -355,9 +248,7 @@ const ProviderRegistrationForm: React.FC = () => {
       category: category as ServiceCategory,
       serviceTitle,
       serviceDescription,
-      serviceImage: serviceImageFile, // Pass the File object
       rate: Number(rate),
-      profileImage: profileImageFile, // Pass the File object
     });
     if (success) {
       navigate("/provider-dashboard"); // Navigate after successful registration and login
@@ -480,31 +371,6 @@ const ProviderRegistrationForm: React.FC = () => {
         />
       </div>
       <div>
-        <Label htmlFor="provider-service-image-upload">Subir Imagen de Servicio (opcional, máx. 1MB)</Label>
-        <Input
-          id="provider-service-image-upload"
-          type="file"
-          accept="image/*"
-          onChange={handleServiceImageChange}
-          className="mt-1"
-        />
-        {serviceImagePreview && (
-          <div className="mt-4 flex flex-col items-center relative">
-            <Label className="mb-2">Previsualización de Imagen:</Label>
-            <img src={serviceImagePreview} alt="Previsualización de Servicio" className="w-32 h-32 object-cover rounded-md border-2 border-gray-300 dark:border-gray-600" />
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={handleClearServiceImage}
-              className="absolute top-0 right-0 -mt-2 -mr-2 rounded-full bg-white dark:bg-gray-700 text-red-500 hover:text-red-700"
-            >
-              <XCircle className="h-5 w-5" />
-            </Button>
-          </div>
-        )}
-      </div>
-      <div>
         <Label htmlFor="provider-rate">Tarifa por Servicio (USD)</Label>
         <Input
           id="provider-rate"
@@ -516,31 +382,6 @@ const ProviderRegistrationForm: React.FC = () => {
           min="0"
           step="0.01"
         />
-      </div>
-      <div>
-        <Label htmlFor="provider-profile-image">Subir Imagen de Perfil (opcional, máx. 1MB)</Label>
-        <Input
-          id="provider-profile-image"
-          type="file"
-          accept="image/*"
-          onChange={handleProfileImageChange}
-          className="mt-1"
-        />
-        {profileImagePreview && (
-          <div className="mt-4 flex flex-col items-center relative">
-            <Label className="mb-2">Previsualización de Imagen:</Label>
-            <img src={profileImagePreview} alt="Previsualización de Perfil" className="w-24 h-24 object-cover rounded-full border-2 border-gray-300 dark:border-gray-600" />
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={handleClearProfileImage}
-              className="absolute top-0 right-0 -mt-2 -mr-2 rounded-full bg-white dark:bg-gray-700 text-red-500 hover:text-red-700"
-            >
-              <XCircle className="h-5 w-5" />
-            </Button>
-          </div>
-        )}
       </div>
       <div>
         <Label htmlFor="provider-password">Contraseña</Label>
