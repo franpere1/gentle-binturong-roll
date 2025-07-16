@@ -51,6 +51,7 @@ export interface User {
   createdAt: number;
   profileImage?: ImageSource;
   type: "client" | "provider" | "admin";
+  password?: string; // Added password field for demo purposes
 }
 
 export interface Client extends User {

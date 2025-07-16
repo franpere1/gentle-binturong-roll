@@ -45,6 +45,7 @@ const defaultAdmin: Admin = {
   type: "admin",
   createdAt: Date.now() - 100000,
   profileImage: null,
+  password: "kilmanjaro", // Added default password
 };
 
 const defaultClient: Client = {
@@ -56,6 +57,7 @@ const defaultClient: Client = {
   createdAt: Date.now() - 90000,
   profileImage: null,
   phone: "0412-1234567",
+  password: "password", // Added default password
 };
 
 const defaultProvider: Provider = {
@@ -74,6 +76,7 @@ const defaultProvider: Provider = {
   rate: 45.00,
   feedback: [],
   starRating: 4,
+  password: "password", // Added default password
 };
 
 // Helper to load users from localStorage
@@ -98,16 +101,17 @@ const saveUsersToLocalStorage = (users: (Client | Provider | Admin)[]) => {
   }
 };
 
-// Initialize in-memory users (this will be the mutable array)
-let inMemoryUsers: (Client | Provider | Admin)[] = loadUsersFromLocalStorage();
-
-// If no users are loaded, populate with defaults and save
-if (inMemoryUsers.length === 0) {
-  inMemoryUsers.push(defaultAdmin, defaultClient, defaultProvider);
-  saveUsersToLocalStorage(inMemoryUsers);
-}
-
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+  // Initialize users state with data from localStorage or defaults
+  const [users, setUsers] = useState<Array<Client | Provider | Admin>>(() => {
+    let initialUsers = loadUsersFromLocalStorage();
+    if (initialUsers.length === 0) {
+      initialUsers = [defaultAdmin, defaultClient, defaultProvider];
+      saveUsersToLocalStorage(initialUsers);
+    }
+    return initialUsers;
+  });
+
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -115,37 +119,35 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const storedUserId = localStorage.getItem(LOCAL_STORAGE_CURRENT_USER_ID_KEY);
     if (storedUserId) {
-      const user = inMemoryUsers.find(u => u.id === storedUserId);
+      const user = users.find(u => u.id === storedUserId);
       if (user) {
         setCurrentUser(user);
         showSuccess(`Bienvenido de nuevo, ${user.name}! (Modo Demo)`);
       }
     }
     setIsLoading(false);
-  }, []);
+  }, [users]); // Depend on 'users' state to ensure it's updated
 
   const findUserByEmail = useCallback(async (email: string): Promise<User | undefined> => {
-    return inMemoryUsers.find(user => user.email === email);
-  }, []);
+    return users.find(user => user.email === email);
+  }, [users]);
 
   const findUserById = useCallback(async (id: string): Promise<User | undefined> => {
-    return inMemoryUsers.find(user => user.id === id);
-  }, []);
+    return users.find(user => user.id === id);
+  }, [users]);
 
   const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
-    const user = inMemoryUsers.find(u => u.email === email);
+    const user = users.find(u => u.email === email);
 
     if (user) {
-      // Simplified password check for demo purposes
-      if ((email === "admin@admin.com" && password === "kilmanjaro") ||
-          (email === "client@example.com" && password === "password") ||
-          (email === "provider@example.com" && password === "password")) {
+      // Check password against the stored password for the found user
+      if (user.password === password) {
         setCurrentUser(user);
         localStorage.setItem(LOCAL_STORAGE_CURRENT_USER_ID_KEY, user.id); // Save current user ID
         showSuccess(`Bienvenido, ${user.name}! (Modo Demo)`);
         setIsLoading(false);
-        return true;
+        return true; // Login successful
       } else {
         showError("Credenciales incorrectas.");
       }
@@ -153,7 +155,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       showError("Usuario no encontrado.");
     }
     setIsLoading(false);
-    return false;
+    return false; // Login failed
   };
 
   const logout = async () => {
@@ -166,7 +168,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const registerClient = async (clientData: Omit<Client, "id" | "createdAt" | "type" | "profileImage"> & { password?: string }): Promise<boolean> => {
     setIsLoading(true);
-    if (inMemoryUsers.some(u => u.email === clientData.email)) {
+    if (users.some(u => u.email === clientData.email)) {
       showError("Este correo electrónico ya está registrado.");
       setIsLoading(false);
       return false;
@@ -181,9 +183,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       type: "client",
       createdAt: Date.now(),
       profileImage: null,
+      password: clientData.password, // Store the password
     };
-    inMemoryUsers.push(newClient);
-    saveUsersToLocalStorage(inMemoryUsers); // Save updated users
+    const updatedUsers = [...users, newClient];
+    setUsers(updatedUsers); // Update state
+    saveUsersToLocalStorage(updatedUsers); // Save updated users
     setCurrentUser(newClient);
     localStorage.setItem(LOCAL_STORAGE_CURRENT_USER_ID_KEY, newClient.id); // Save current user ID
     showSuccess("Registro de cliente exitoso. ¡Ahora estás logeado! (Modo Demo)");
@@ -193,7 +197,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const registerProvider = async (providerData: Omit<Provider, "id" | "createdAt" | "type" | "feedback" | "starRating" | "profileImage" | "serviceImage"> & { password?: string }): Promise<boolean> => {
     setIsLoading(true);
-    if (inMemoryUsers.some(u => u.email === providerData.email)) {
+    if (users.some(u => u.email === providerData.email)) {
       showError("Este correo electrónico ya está registrado.");
       setIsLoading(false);
       return false;
@@ -215,9 +219,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       starRating: 0,
       createdAt: Date.now(),
       profileImage: null,
+      password: providerData.password, // Store the password
     };
-    inMemoryUsers.push(newProvider);
-    saveUsersToLocalStorage(inMemoryUsers); // Save updated users
+    const updatedUsers = [...users, newProvider];
+    setUsers(updatedUsers); // Update state
+    saveUsersToLocalStorage(updatedUsers); // Save updated users
     setCurrentUser(newProvider);
     localStorage.setItem(LOCAL_STORAGE_CURRENT_USER_ID_KEY, newProvider.id); // Save current user ID
     showSuccess("Registro de proveedor exitoso. ¡Ahora estás logeado! (Modo Demo)");
@@ -227,10 +233,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const updateUser = async (updatedUser: User) => {
     setIsLoading(true);
-    const index = inMemoryUsers.findIndex(u => u.id === updatedUser.id);
+    const index = users.findIndex(u => u.id === updatedUser.id);
     if (index !== -1) {
-      inMemoryUsers[index] = updatedUser as Client | Provider | Admin;
-      saveUsersToLocalStorage(inMemoryUsers); // Save updated users
+      const updatedUsers = [...users];
+      updatedUsers[index] = updatedUser as Client | Provider | Admin;
+      setUsers(updatedUsers); // Update state
+      saveUsersToLocalStorage(updatedUsers); // Save updated users
       setCurrentUser(updatedUser); // Update current user state
       showSuccess("Información actualizada correctamente. (Modo Demo)");
     } else {
@@ -240,7 +248,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const getAllProviders = async (): Promise<Provider[]> => {
-    return inMemoryUsers.filter((user): user is Provider => user.type === "provider");
+    return users.filter((user): user is Provider => user.type === "provider");
   };
 
   const addFeedbackToProvider = async (
@@ -248,13 +256,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     type: FeedbackType,
     comment: string
   ) => {
-    const providerIndex = inMemoryUsers.findIndex(u => u.id === providerId && u.type === "provider");
+    const providerIndex = users.findIndex(u => u.id === providerId && u.type === "provider");
     if (providerIndex === -1) {
       showError("Proveedor no encontrado para añadir feedback.");
       return;
     }
 
-    const provider = inMemoryUsers[providerIndex] as Provider;
+    const provider = users[providerIndex] as Provider;
     const currentFeedback = provider.feedback || [];
     const newFeedback: Feedback = {
       id: `feedback-${currentFeedback.length + 1}-${Date.now()}`,
@@ -277,8 +285,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       starRating: newStarRating,
     };
 
-    inMemoryUsers[providerIndex] = updatedProvider; // Update in-memory array
-    saveUsersToLocalStorage(inMemoryUsers); // Save updated users
+    const updatedUsers = [...users];
+    updatedUsers[providerIndex] = updatedProvider; // Update in-memory array
+    setUsers(updatedUsers); // Update state
+    saveUsersToLocalStorage(updatedUsers); // Save updated users
     // If the updated provider is the current user, update currentUser state
     if (currentUser?.id === providerId) {
       setCurrentUser(updatedProvider);
