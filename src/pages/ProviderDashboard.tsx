@@ -133,6 +133,18 @@ import React, { useState, useMemo, useEffect } from "react";
         }
       };
 
+      const handleDisputeContract = async (contractId: string) => {
+        if (currentUser) {
+          await handleContractAction(contractId, currentUser.id, 'dispute');
+        }
+      };
+
+      const handleCancelDispute = async (contractId: string) => {
+        if (currentUser) {
+          await handleContractAction(contractId, currentUser.id, 'cancel_dispute');
+        }
+      };
+
       const handleMakeOfferClick = (contract: Contract) => {
         setContractToOffer(contract);
         setIsMakeOfferModalOpen(true);
@@ -353,12 +365,23 @@ import React, { useState, useMemo, useEffect } from "react";
                       contract.providerAction !== "finalize" &&
                       contract.providerAction !== "cancel" &&
                       contract.clientAction !== "cancel" &&
-                      contract.clientAction !== "dispute";
+                      contract.clientAction !== "dispute" &&
+                      contract.clientAction !== "finalize"; // Can't finalize if client already finalized
 
                     const canProviderCancel =
                       (contract.status === "pending" && contract.providerAction === "none") ||
                       (contract.status === "offered" && contract.providerAction === "make_offer" && contract.clientAction === "none") ||
                       (contract.status === "active" && contract.clientDeposited && contract.providerAction !== "finalize" && contract.providerAction !== "cancel" && contract.clientAction !== "dispute" && contract.clientAction !== "finalize");
+
+                    const canProviderDispute =
+                      contract.status === "active" &&
+                      contract.clientDeposited &&
+                      contract.providerAction === "finalize" && // Provider has finalized
+                      contract.clientAction !== "finalize" && // Client has NOT finalized
+                      contract.clientAction !== "cancel" && // Client has NOT cancelled
+                      contract.clientAction !== "dispute"; // Client has NOT disputed
+
+                    const canProviderCancelDispute = contract.status === "disputed" && contract.providerAction === "dispute";
 
                     const canProviderChat = (contract.status === "pending" || contract.status === "offered" || contract.status === "active" || contract.status === "disputed");
 
@@ -390,9 +413,6 @@ import React, { useState, useMemo, useEffect } from "react";
                         } else if (contract.providerAction === "cancel" && contract.clientAction === "none") {
                           statusText = "Cancelación iniciada (Esperando cliente)";
                           statusColorClass = "text-red-600";
-                        } else if (contract.clientAction === "dispute") {
-                          statusText = "En Disputa (Iniciada por cliente)";
-                          statusColorClass = "text-orange-600";
                         }
                         else {
                           statusText = "Activo (En curso)";
@@ -416,7 +436,7 @@ import React, { useState, useMemo, useEffect } from "react";
                         statusColorClass = "text-red-600";
                         break;
                       case "disputed":
-                        statusText = "En Disputa (Esperando resolución)";
+                        statusText = `En Disputa (${contract.clientAction === "dispute" ? "Iniciada por cliente" : "Iniciada por ti"})`;
                         statusColorClass = "text-orange-600";
                         break;
                       case "finalized_by_dispute":
@@ -427,6 +447,17 @@ import React, { useState, useMemo, useEffect } from "react";
                         statusText = "Desconocido";
                         statusColorClass = "text-gray-500";
                     }
+
+                    // --- DEBUGGING LOGS ---
+                    console.log(`--- Contract ${contract.id} ---`);
+                    console.log(`Status: ${contract.status}`);
+                    console.log(`Client Deposited: ${contract.clientDeposited}`);
+                    console.log(`Provider Action: ${contract.providerAction}`);
+                    console.log(`Client Action: ${contract.clientAction}`);
+                    console.log(`canProviderDispute: ${canProviderDispute}`);
+                    console.log(`canProviderCancelDispute: ${canProviderCancelDispute}`);
+                    console.log(`--------------------------`);
+                    // --- END DEBUGGING LOGS ---
 
                     return (
                       <Card key={contract.id} className="flex flex-col">
@@ -455,7 +486,7 @@ import React, { useState, useMemo, useEffect } from "react";
                           </p>
                           <p className="mb-1">
                             <span className="font-medium">Tu Acción:</span>{" "}
-                            {contract.providerAction === "none" ? "Pendiente" : contract.providerAction === "make_offer" ? "Oferta Enviada" : contract.providerAction === "finalize" ? "Finalizar" : "Cancelar"}
+                            {contract.providerAction === "none" ? "Pendiente" : contract.providerAction === "make_offer" ? "Oferta Enviada" : contract.providerAction === "finalize" ? "Finalizar" : contract.providerAction === "dispute" ? "Disputar" : "Cancelar"}
                           </p>
                           <p className="mb-1">
                             <span className="font-medium">Acción Cliente:</span>{" "}
@@ -477,6 +508,16 @@ import React, { useState, useMemo, useEffect } from "react";
                                 Cancelar Contrato
                               </Button>
                             )}
+                            {canProviderDispute && (
+                              <Button variant="destructive" className="w-full" onClick={() => handleDisputeContract(contract.id)}>
+                                Disputar
+                              </Button>
+                            )}
+                            {canProviderCancelDispute && (
+                              <Button variant="outline" className="w-full bg-yellow-500 hover:bg-yellow-600 text-white" onClick={() => handleCancelDispute(contract.id)}>
+                                Cancelar Disputa
+                              </Button>
+                            )}
                             {canProviderChat && clientUser && (
                               <Button
                                 className={`w-full ${hasNewMessages ? 'btn-new-message-pulse' : ''}`}
@@ -485,7 +526,7 @@ import React, { useState, useMemo, useEffect } from "react";
                                 {hasNewMessages ? 'Mensaje Nuevo' : 'Chatear'}
                               </Button>
                             )}
-                            {!canProviderMakeOffer && !canProviderFinalize && !canProviderCancel && !canProviderChat && contract.status !== "finalized" && contract.status !== "cancelled" && contract.status !== "disputed" && contract.status !== "finalized_by_dispute" && (
+                            {!canProviderMakeOffer && !canProviderFinalize && !canProviderCancel && !canProviderDispute && !canProviderCancelDispute && !canProviderChat && contract.status !== "finalized" && contract.status !== "cancelled" && contract.status !== "disputed" && contract.status !== "finalized_by_dispute" && (
                               <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
                                 {contract.providerAction !== "none" ? "Esperando acción de la otra parte." : "Esperando acción del cliente."}
                               </p>
