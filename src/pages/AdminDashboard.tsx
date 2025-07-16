@@ -205,7 +205,6 @@ import React, { useMemo, useState, useEffect } from "react";
                     <CardDescription className="text-green-600 dark:text-green-400">
                       Ganancias de la plataforma por servicios finalizados.
                     </CardDescription>
-                  </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <p className="text-4xl font-bold text-green-800 dark:text-green-200">
