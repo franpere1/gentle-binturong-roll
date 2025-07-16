@@ -195,7 +195,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       phone: clientData.phone,
       type: "client",
       createdAt: Date.now(),
-      profileImage: null,
+      profileImage: null, // Default to null on registration
       password: clientData.password,
     };
     const updatedUsers = [...users, newClient];
@@ -226,12 +226,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       category: providerData.category,
       serviceTitle: providerData.serviceTitle,
       serviceDescription: providerData.serviceDescription,
-      serviceImage: null,
+      serviceImage: null, // Default to null on registration
       rate: providerData.rate,
       feedback: [],
       starRating: 0,
       createdAt: Date.now(),
-      profileImage: null,
+      profileImage: null, // Default to null on registration
       password: providerData.password,
     };
     const updatedUsers = [...users, newProvider];
@@ -249,7 +249,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const index = users.findIndex(u => u.id === updatedUser.id);
     if (index !== -1) {
       const updatedUsers = [...users];
-      updatedUsers[index] = updatedUser as Client | Provider | Admin;
+      // Ensure the type is correctly maintained when updating
+      if (updatedUser.type === "client") {
+        updatedUsers[index] = updatedUser as Client;
+      } else if (updatedUser.type === "provider") {
+        updatedUsers[index] = updatedUser as Provider;
+      } else if (updatedUser.type === "admin") {
+        updatedUsers[index] = updatedUser as Admin;
+      }
+      
       setUsers(updatedUsers);
       saveUsersToLocalStorage(updatedUsers);
       setCurrentUser(updatedUser);

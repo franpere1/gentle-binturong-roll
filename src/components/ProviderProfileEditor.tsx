@@ -19,7 +19,7 @@ import {
   Textarea
 } from "@/components/ui/textarea";
 import { VENEZUELAN_STATES } from "@/constants/venezuelanStates";
-import { ServiceCategory, Provider } from "@/types";
+import { ServiceCategory, Provider, ImageSource } from "@/types";
 import { useAuth } from "@/context/AuthContext";
 import { showError, showSuccess } from "@/utils/toast";
 import {
@@ -36,7 +36,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Check, ChevronsUpDown } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, fileToBase64 } from "@/lib/utils"; // Import fileToBase64
 
 interface ProviderProfileEditorProps {
   onSave: () => void;
@@ -58,6 +58,8 @@ const ProviderProfileEditor: React.FC<ProviderProfileEditorProps> = ({
   const [serviceTitle, setServiceTitle] = useState(provider.serviceTitle);
   const [serviceDescription, setServiceDescription] = useState(provider.serviceDescription);
   const [rate, setRate] = useState<number | ''>(provider.rate);
+  const [profileImage, setProfileImage] = useState<ImageSource>(provider.profileImage); // State for profile image
+  const [serviceImage, setServiceImage] = useState<ImageSource>(provider.serviceImage); // State for service image
   const [openCategoryCombobox, setOpenCategoryCombobox] = useState(false);
 
   // Update local state if currentUser changes (e.g., after a successful update)
@@ -71,6 +73,8 @@ const ProviderProfileEditor: React.FC<ProviderProfileEditorProps> = ({
       setServiceTitle(currentUser.serviceTitle);
       setServiceDescription(currentUser.serviceDescription);
       setRate(currentUser.rate);
+      setProfileImage(currentUser.profileImage);
+      setServiceImage(currentUser.serviceImage);
     }
   }, [currentUser]);
 
@@ -84,6 +88,30 @@ const ProviderProfileEditor: React.FC<ProviderProfileEditorProps> = ({
     "Plomero", "Repostero", "Servicios de sistemas", "Servicios digitales", "Servicios electrónica",
     "Técnico de aire acondicionado",
   ].sort();
+
+  const handleProfileImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const base64 = await fileToBase64(file, 200, 200); // Resize for profile image
+      if (base64) {
+        setProfileImage(base64);
+      } else {
+        showError("Error al cargar la imagen de perfil.");
+      }
+    }
+  };
+
+  const handleServiceImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const base64 = await fileToBase64(file, 800, 600); // Resize for service image
+      if (base64) {
+        setServiceImage(base64);
+      } else {
+        showError("Error al cargar la imagen del servicio.");
+      }
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,9 +138,9 @@ const ProviderProfileEditor: React.FC<ProviderProfileEditorProps> = ({
       category: category as ServiceCategory,
       serviceTitle,
       serviceDescription,
-      serviceImage: null, // Always set to null as image upload is disabled
+      serviceImage, // Use the state value
       rate: Number(rate),
-      profileImage: null, // Always set to null as image upload is disabled
+      profileImage, // Use the state value
     };
 
     await updateUser(updatedProvider);
@@ -167,6 +195,21 @@ const ProviderProfileEditor: React.FC<ProviderProfileEditorProps> = ({
               placeholder="Ej: 0412-1234567"
               required
             />
+          </div>
+          <div>
+            <Label htmlFor="edit-profile-image">Foto de Perfil</Label>
+            <Input
+              id="edit-profile-image"
+              type="file"
+              accept="image/*"
+              onChange={handleProfileImageChange}
+              className="mt-1"
+            />
+            {profileImage && (
+              <div className="mt-2">
+                <img src={profileImage} alt="Vista previa del perfil" className="w-24 h-24 rounded-full object-cover" />
+              </div>
+            )}
           </div>
           <div>
             <Label htmlFor="edit-category">Categoría del Servicio</Label>
@@ -234,6 +277,21 @@ const ProviderProfileEditor: React.FC<ProviderProfileEditorProps> = ({
               maxLength={50}
               required
             />
+          </div>
+          <div>
+            <Label htmlFor="edit-service-image">Imagen del Servicio</Label>
+            <Input
+              id="edit-service-image"
+              type="file"
+              accept="image/*"
+              onChange={handleServiceImageChange}
+              className="mt-1"
+            />
+            {serviceImage && (
+              <div className="mt-2">
+                <img src={serviceImage} alt="Vista previa del servicio" className="w-full h-40 object-cover rounded-md" />
+              </div>
+            )}
           </div>
           <div>
             <Label htmlFor="edit-rate">Tarifa por Servicio (USD)</Label>
