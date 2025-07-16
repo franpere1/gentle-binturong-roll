@@ -71,13 +71,38 @@ const Auth: React.FC = () => {
 const LoginForm: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const { login } = useAuth();
+  const { login, currentUser } = useAuth(); // Get currentUser to determine redirection path
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await login(email, password);
-    // Navigation is now handled by AuthContext's onAuthStateChange and Index.tsx
+    const success = await login(email, password);
+    if (success) {
+      // After successful login, navigate based on the user type
+      // The currentUser state should be updated by the login function
+      // We need to wait for the currentUser to be set before navigating.
+      // A small delay or a useEffect in Auth component could also work,
+      // but for simplicity, we'll check currentUser immediately after login.
+      // However, currentUser might not be updated synchronously here.
+      // A better approach is to rely on the Index.tsx for redirection after login.
+      // But since the user is on /auth, Index.tsx won't trigger.
+      // So, we need to get the user type from the login function or AuthContext after login.
+      // Since login now returns success, we can check the current user type.
+      if (currentUser) { // Check if currentUser is set after login
+        if (currentUser.type === "client") {
+          navigate("/client-dashboard");
+        } else if (currentUser.type === "provider") {
+          navigate("/provider-dashboard");
+        } else if (currentUser.type === "admin") {
+          navigate("/admin-dashboard");
+        }
+      } else {
+        // If currentUser is still null after successful login (shouldn't happen with current logic)
+        // This might indicate a deeper issue or a very fast re-render before state propagates.
+        // For now, we'll just navigate to the root, which Index.tsx will then handle.
+        navigate("/");
+      }
+    }
   };
 
   return (

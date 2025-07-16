@@ -12,7 +12,7 @@ import { showSuccess, showError } from "@/utils/toast";
 interface AuthContextType {
   currentUser: User | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<boolean>; // Changed return type to boolean
   logout: () => Promise<void>;
   registerClient: (clientData: Omit<Client, "id" | "createdAt" | "type" | "profileImage"> & { password?: string }) => Promise<boolean>;
   registerProvider: (providerData: Omit<Provider, "id" | "createdAt" | "type" | "feedback" | "starRating" | "profileImage" | "serviceImage"> & { password?: string }) => Promise<boolean>;
@@ -113,19 +113,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return inMemoryUsers.find(user => user.id === id);
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string): Promise<boolean> => { // Updated return type
     setIsLoading(true);
-    // In a real in-memory system, you'd check a stored password.
-    // For this simulation, we'll just check if the user exists by email.
     const user = inMemoryUsers.find(u => u.email === email);
 
     if (user) {
-      // Simulate password check (very basic)
       if ((email === "admin@admin.com" && password === "kilmanjaro") ||
           (email === "client@example.com" && password === "password") ||
           (email === "provider@example.com" && password === "password")) {
         setCurrentUser(user);
         showSuccess(`Bienvenido, ${user.name}! (Modo Demo)`);
+        setIsLoading(false);
+        return true; // Login successful
       } else {
         showError("Credenciales incorrectas.");
       }
@@ -133,6 +132,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       showError("Usuario no encontrado.");
     }
     setIsLoading(false);
+    return false; // Login failed
   };
 
   const logout = async () => {
