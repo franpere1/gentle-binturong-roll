@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } => from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { VENEZUELAN_STATES } from "@/constants/venezuelanStates";
 import { ServiceCategory } from "@/types";
