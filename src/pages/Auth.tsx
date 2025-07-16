@@ -45,7 +45,7 @@ const Auth: React.FC = () => {
           <h2 className="text-2xl font-bold text-center mb-2 text-foreground dark:text-foreground">
             Bienvenido a TE LO HAGO
           </h2>
-          <p className="text-md text-center text-gray-600 dark:text-gray-400 mb-6">
+          <p className="text-lg font-semibold text-foreground dark:text-foreground mb-6">
             El Portal donde todo te lo pueden hacer
           </p>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
