@@ -448,17 +448,6 @@ import React, { useState, useMemo, useEffect } from "react";
                         statusColorClass = "text-gray-500";
                     }
 
-                    // --- DEBUGGING LOGS ---
-                    console.log(`--- Contract ${contract.id} ---`);
-                    console.log(`Status: ${contract.status}`);
-                    console.log(`Client Deposited: ${contract.clientDeposited}`);
-                    console.log(`Provider Action: ${contract.providerAction}`);
-                    console.log(`Client Action: ${contract.clientAction}`);
-                    console.log(`canProviderDispute: ${canProviderDispute}`);
-                    console.log(`canProviderCancelDispute: ${canProviderCancelDispute}`);
-                    console.log(`--------------------------`);
-                    // --- END DEBUGGING LOGS ---
-
                     return (
                       <Card key={contract.id} className="flex flex-col">
                         <CardHeader>
