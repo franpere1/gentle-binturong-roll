@@ -102,7 +102,7 @@ const saveUsersToLocalStorage = (users: (Client | Provider | Admin)[]) => {
     localStorage.setItem(LOCAL_STORAGE_USERS_KEY, JSON.stringify(users));
   } catch (error) {
     console.error("Error saving users to localStorage:", error);
-  );
+  }
 };
 
 // Helper to load exchange rate from localStorage
