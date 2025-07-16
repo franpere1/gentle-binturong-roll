@@ -42,9 +42,12 @@ const Auth: React.FC = () => {
       <Header />
       <div className="flex-grow flex items-center justify-center bg-gray-100 dark:bg-gray-900 p-4">
         <div className="w-full max-w-md bg-card dark:bg-gray-800 p-8 rounded-lg shadow-md">
-          <h2 className="text-2xl font-bold text-center mb-6 text-foreground dark:text-foreground">
+          <h2 className="text-2xl font-bold text-center mb-2 text-foreground dark:text-foreground">
             Bienvenido a TE LO HAGO
           </h2>
+          <p className="text-md text-center text-gray-600 dark:text-gray-400 mb-6">
+            El Portal donde todo te lo pueden hacer
+          </p>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="login">Iniciar Sesión</TabsTrigger>
