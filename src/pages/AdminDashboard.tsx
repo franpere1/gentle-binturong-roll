@@ -234,7 +234,7 @@ import React, { useMemo, useState, useEffect } from "react";
                   </Button>
                 </div>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 text-center">
-                  Tasa actual: 1 USD = {exchangeRate.toFixed(2)} VEF
+                  Tasa Oficial BCV: 1 USD = {exchangeRate.toFixed(2)} VEF
                 </p>
               </div>
 
