@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from "react";
     import { Message, User } from "@/types";
     import { useAuth } from "./AuthContext";
-    import { supabase } from "@/lib/supabase"; // Import Supabase client
 
     interface ChatContextType {
       messages: Message[];
@@ -18,84 +17,17 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useCa
       children: ReactNode;
     }
 
+    // In-memory storage for messages (simulating a database)
+    let inMemoryMessages: Message[] = [];
+
     export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
       const { currentUser } = useAuth();
-      const [allMessages, setAllMessages] = useState<Message[]>([]);
+      const [allMessages, setAllMessages] = useState<Message[]>(inMemoryMessages);
 
-      // Fetch messages on component mount and when currentUser changes
+      // Update local state when inMemoryMessages changes (simulating real-time)
       useEffect(() => {
-        const fetchMessages = async () => {
-          if (!currentUser) {
-            setAllMessages([]);
-            return;
-          }
-
-          const { data, error } = await supabase
-            .from('messages')
-            .select('*')
-            .or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`);
-
-          if (error) {
-            console.error("Error fetching messages:", error);
-            return;
-          }
-
-          const fetchedMessages: Message[] = data.map(msg => ({
-            id: msg.id,
-            senderId: msg.sender_id,
-            receiverId: msg.receiver_id,
-            text: msg.text,
-            timestamp: msg.timestamp,
-            readBy: msg.read_by || [],
-          }));
-          setAllMessages(fetchedMessages);
-        };
-
-        fetchMessages();
-
-        // Set up real-time subscription for messages
-        const channel = supabase
-          .channel('messages_channel')
-          .on(
-            'postgres_changes',
-            { event: '*', schema: 'public', table: 'messages' },
-            (payload) => {
-              console.log('Change received!', payload);
-              if (payload.eventType === 'INSERT') {
-                const newMessage: Message = {
-                  id: payload.new.id,
-                  senderId: payload.new.sender_id,
-                  receiverId: payload.new.receiver_id,
-                  text: payload.new.text,
-                  timestamp: payload.new.timestamp,
-                  readBy: payload.new.read_by || [],
-                };
-                setAllMessages((prev) => [...prev, newMessage]);
-              } else if (payload.eventType === 'UPDATE') {
-                const updatedMessage: Message = {
-                  id: payload.new.id,
-                  senderId: payload.new.sender_id,
-                  receiverId: payload.new.receiver_id,
-                  text: payload.new.text,
-                  timestamp: payload.new.timestamp,
-                  readBy: payload.new.read_by || [],
-                };
-                setAllMessages((prev) =>
-                  prev.map((msg) => (msg.id === updatedMessage.id ? updatedMessage : msg))
-                );
-              } else if (payload.eventType === 'DELETE') {
-                setAllMessages((prev) =>
-                  prev.filter((msg) => msg.id !== payload.old.id)
-                );
-              }
-            }
-          )
-          .subscribe();
-
-        return () => {
-          supabase.removeChannel(channel);
-        };
-      }, [currentUser]);
+        setAllMessages(inMemoryMessages);
+      }, []); // Only run once on mount, subsequent changes will be direct state updates
 
       const sendMessage = async (receiverId: string, text: string) => {
         if (!currentUser) {
@@ -103,22 +35,18 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useCa
           return;
         }
 
-        const { data, error } = await supabase.from('messages').insert([
-          {
-            sender_id: currentUser.id,
-            receiver_id: receiverId,
-            text,
-            timestamp: Date.now(),
-            read_by: [],
-          }
-        ]).select().single();
+        const newMessage: Message = {
+          id: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+          senderId: currentUser.id,
+          receiverId: receiverId,
+          text,
+          timestamp: Date.now(),
+          readBy: [], // Initially read by no one
+        };
 
-        if (error) {
-          console.error("Error sending message:", error);
-        } else {
-          // Message will be added via real-time subscription, no need to manually update state here
-          console.log("Message sent and inserted into DB:", data);
-        }
+        inMemoryMessages.push(newMessage);
+        setAllMessages([...inMemoryMessages]); // Force re-render
+        console.log("Message sent (in-memory):", newMessage);
       };
 
       const getMessagesForConversation = useCallback((otherUserId: string): Message[] => {
@@ -133,44 +61,39 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useCa
       }, [allMessages, currentUser]);
 
       const clearConversationMessages = async (user1Id: string, user2Id: string) => {
-        const { error } = await supabase
-          .from('messages')
-          .delete()
-          .or(`(sender_id.eq.${user1Id},receiver_id.eq.${user2Id}),(sender_id.eq.${user2Id},receiver_id.eq.${user1Id})`);
-
-        if (error) {
-          console.error("Error clearing conversation messages:", error);
-        } else {
-          // Messages will be removed via real-time subscription
-          console.log("Conversation messages cleared from DB.");
-        }
+        inMemoryMessages = inMemoryMessages.filter(
+          (msg) =>
+            !((msg.senderId === user1Id && msg.receiverId === user2Id) ||
+              (msg.senderId === user2Id && msg.receiverId === user1Id))
+        );
+        setAllMessages([...inMemoryMessages]); // Force re-render
+        console.log("Conversation messages cleared (in-memory).");
       };
 
       const markMessagesAsRead = useCallback(async (otherUserId: string) => {
         if (!currentUser) return;
 
-        const unreadMessages = allMessages.filter(
-          (msg) =>
+        let updated = false;
+        inMemoryMessages = inMemoryMessages.map(msg => {
+          if (
             msg.senderId === otherUserId &&
             msg.receiverId === currentUser.id &&
             !msg.readBy?.includes(currentUser.id)
-        );
-
-        if (unreadMessages.length > 0) {
-          const messageIdsToUpdate = unreadMessages.map(msg => msg.id);
-          const { error } = await supabase
-            .from('messages')
-            .update({ read_by: supabase.fn.arrayAppend('read_by', currentUser.id) })
-            .in('id', messageIdsToUpdate);
-
-          if (error) {
-            console.error("Error marking messages as read:", error);
-          } else {
-            // Messages will be updated via real-time subscription
-            console.log("Messages marked as read in DB.");
+          ) {
+            updated = true;
+            return {
+              ...msg,
+              readBy: [...(msg.readBy || []), currentUser.id],
+            };
           }
+          return msg;
+        });
+
+        if (updated) {
+          setAllMessages([...inMemoryMessages]); // Force re-render
+          console.log("Messages marked as read (in-memory).");
         }
-      }, [allMessages, currentUser]);
+      }, [currentUser]);
 
       const hasUnreadMessages = useCallback((otherUserId: string): boolean => {
         if (!currentUser) return false;

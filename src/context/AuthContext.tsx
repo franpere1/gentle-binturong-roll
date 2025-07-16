@@ -8,15 +8,14 @@ import React, {
 } from "react";
 import { Client, Provider, User, Feedback, FeedbackType, Admin, ImageSource } from "@/types";
 import { showSuccess, showError } from "@/utils/toast";
-import { supabase } from "@/lib/supabase";
 
 interface AuthContextType {
   currentUser: User | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  registerClient: (clientData: Omit<Client, "id" | "createdAt" | "type" | "profileImage">) => Promise<boolean>;
-  registerProvider: (providerData: Omit<Provider, "id" | "createdAt" | "type" | "feedback" | "starRating" | "profileImage" | "serviceImage">) => Promise<boolean>;
+  registerClient: (clientData: Omit<Client, "id" | "createdAt" | "type" | "profileImage"> & { password?: string }) => Promise<boolean>;
+  registerProvider: (providerData: Omit<Provider, "id" | "createdAt" | "type" | "feedback" | "starRating" | "profileImage" | "serviceImage"> & { password?: string }) => Promise<boolean>;
   findUserByEmail: (email: string) => Promise<User | undefined>;
   findUserById: (id: string) => Promise<User | undefined>;
   updateUser: (user: User) => Promise<void>;
@@ -34,358 +33,187 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
+// In-memory storage for users (simulating a database)
+let inMemoryUsers: (Client | Provider | Admin)[] = [];
+
+// Add default users for testing
+const defaultAdmin: Admin = {
+  id: "admin-123",
+  name: "Admin",
+  email: "admin@admin.com",
+  state: "Distrito Capital",
+  type: "admin",
+  createdAt: Date.now() - 100000,
+  profileImage: null,
+};
+
+const defaultClient: Client = {
+  id: "client-456",
+  name: "Cliente Demo",
+  email: "client@example.com",
+  state: "Miranda",
+  type: "client",
+  createdAt: Date.now() - 90000,
+  profileImage: null,
+  phone: "0412-1234567",
+};
+
+const defaultProvider: Provider = {
+  id: "provider-789",
+  name: "Proveedor Demo",
+  email: "provider@example.com",
+  state: "Carabobo",
+  type: "provider",
+  createdAt: Date.now() - 80000,
+  profileImage: null,
+  phone: "0414-7654321",
+  category: "Plomero",
+  serviceTitle: "Servicio de Plomería Rápida",
+  serviceDescription: "Reparaciones de tuberías y fugas.",
+  serviceImage: null,
+  rate: 45.00,
+  feedback: [],
+  starRating: 4,
+};
+
+// Initialize in-memory users if not already populated (e.g., on first load)
+if (inMemoryUsers.length === 0) {
+  inMemoryUsers.push(defaultAdmin, defaultClient, defaultProvider);
+}
+
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Function to fetch user profile from public.users by Supabase Auth ID
-  const fetchUserProfile = useCallback(async (id: string): Promise<User | undefined> => {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', id)
-      .single();
-
-    if (error && error.code !== 'PGRST116') {
-      console.error("Error fetching user profile:", error);
-      return undefined;
-    }
-    if (data) {
-      return {
-        id: data.id,
-        name: data.name,
-        email: data.email,
-        state: data.state,
-        type: data.type as User['type'],
-        createdAt: data.created_at,
-        profileImage: data.profile_image,
-        phone: data.phone,
-        category: data.category,
-        serviceTitle: data.service_title,
-        serviceDescription: data.service_description,
-        serviceImage: data.service_image,
-        rate: data.rate,
-        feedback: data.feedback || [],
-        starRating: data.star_rating || 0,
-      } as User;
-    }
-    return undefined;
-  }, []);
-
-  // Function to find user profile by email (used for checking existence before registration)
-  const findUserByEmail = useCallback(async (email: string): Promise<User | undefined> => {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('email', email)
-      .single();
-
-    if (error && error.code !== 'PGRST116') {
-      console.error("Error finding user by email:", error);
-      return undefined;
-    }
-    if (data) {
-      return {
-        id: data.id,
-        name: data.name,
-        email: data.email,
-        state: data.state,
-        type: data.type as User['type'],
-        createdAt: data.created_at,
-        profileImage: data.profile_image,
-        phone: data.phone,
-        category: data.category,
-        serviceTitle: data.service_title,
-        serviceDescription: data.service_description,
-        serviceImage: data.service_image,
-        rate: data.rate,
-        feedback: data.feedback || [],
-        starRating: data.star_rating || 0,
-      } as User;
-    }
-    return undefined;
-  }, []);
-
+  // Simulate initial loading and login as admin
   useEffect(() => {
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setIsLoading(true);
-        if (session?.user) {
-          // User is logged in via Supabase Auth
-          const userProfile = await fetchUserProfile(session.user.id);
-          if (userProfile) {
-            setCurrentUser(userProfile);
-          } else {
-            // This case should ideally not happen if registration is successful
-            // but handles if profile data is missing for some reason
-            console.warn("Supabase Auth user found, but no profile in public.users.");
-            setCurrentUser(null);
-            await supabase.auth.signOut(); // Force logout if profile is missing
-          }
-        } else {
-          // User is logged out
-          setCurrentUser(null);
-        }
-        setIsLoading(false);
-      }
-    );
-
-    // Initial check for session
-    const getSession = async () => {
-      setIsLoading(true);
-      const { data: { session }, error } = await supabase.auth.getSession();
-      if (session?.user) {
-        const userProfile = await fetchUserProfile(session.user.id);
-        if (userProfile) {
-          setCurrentUser(userProfile);
-        } else {
-          console.warn("Initial session found, but no profile in public.users.");
-          await supabase.auth.signOut();
-        }
+    setIsLoading(true);
+    // Simulate a delay for loading
+    const timer = setTimeout(() => {
+      // Automatically log in the admin user for demonstration
+      const adminUser = inMemoryUsers.find(user => user.email === "admin@admin.com");
+      if (adminUser) {
+        setCurrentUser(adminUser);
+        showSuccess(`Bienvenido, ${adminUser.name}! (Modo Demo)`);
+      } else {
+        // Fallback if admin not found (shouldn't happen with default users)
+        setCurrentUser(null);
       }
       setIsLoading(false);
-    };
+    }, 500); // Simulate network delay
 
-    getSession();
+    return () => clearTimeout(timer);
+  }, []);
 
-    // Ensure default admin exists
-    const ensureAdmin = async () => {
-      const adminProfile = await findUserByEmail("admin@admin.com");
-      if (!adminProfile) {
-        // Create admin user in Supabase Auth
-        const { data: authData, error: authError } = await supabase.auth.signUp({
-          email: "admin@admin.com",
-          password: "kilmanjaro", // In a real app, this should be an env var or more secure
-        });
+  const findUserByEmail = useCallback(async (email: string): Promise<User | undefined> => {
+    return inMemoryUsers.find(user => user.email === email);
+  }, []);
 
-        if (authError) {
-          console.error("Error signing up default admin in Supabase Auth:", authError.message);
-          return;
-        }
-
-        if (authData.user) {
-          // Insert admin profile into public.users
-          const { error: profileError } = await supabase.from('users').insert([
-            {
-              id: authData.user.id, // Explicitly set ID for admin
-              name: "Admin",
-              email: "admin@admin.com",
-              state: "Distrito Capital",
-              type: "admin",
-              created_at: Date.now(),
-            }
-          ]);
-          if (profileError) {
-            console.error("Error creating default admin profile:", profileError);
-          } else {
-            console.log("Default admin created and profile added.");
-          }
-        }
-      }
-    };
-    ensureAdmin();
-
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
-  }, [fetchUserProfile, findUserByEmail]);
+  const findUserById = useCallback(async (id: string): Promise<User | undefined> => {
+    return inMemoryUsers.find(user => user.id === id);
+  }, []);
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    // In a real in-memory system, you'd check a stored password.
+    // For this simulation, we'll just check if the user exists by email.
+    const user = inMemoryUsers.find(u => u.email === email);
 
-    if (error) {
-      showError(`Error al iniciar sesión: ${error.message}`);
-    } else if (data.user) {
-      const userProfile = await fetchUserProfile(data.user.id);
-      if (userProfile) {
-        setCurrentUser(userProfile);
-        showSuccess(`Bienvenido, ${userProfile.name}!`);
+    if (user) {
+      // Simulate password check (very basic)
+      if ((email === "admin@admin.com" && password === "kilmanjaro") ||
+          (email === "client@example.com" && password === "password") ||
+          (email === "provider@example.com" && password === "password")) {
+        setCurrentUser(user);
+        showSuccess(`Bienvenido, ${user.name}! (Modo Demo)`);
       } else {
-        showError("No se encontró el perfil de usuario. Por favor, contacta a soporte.");
-        await supabase.auth.signOut(); // Log out if profile is missing
+        showError("Credenciales incorrectas.");
       }
+    } else {
+      showError("Usuario no encontrado.");
     }
     setIsLoading(false);
   };
 
   const logout = async () => {
     setIsLoading(true);
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      showError(`Error al cerrar sesión: ${error.message}`);
-    } else {
-      setCurrentUser(null);
-      showSuccess("Sesión cerrada correctamente.");
-    }
+    setCurrentUser(null);
+    showSuccess("Sesión cerrada correctamente.");
     setIsLoading(false);
   };
 
-  const registerClient = async (clientData: Omit<Client, "id" | "createdAt" | "type" | "profileImage">): Promise<boolean> => {
+  const registerClient = async (clientData: Omit<Client, "id" | "createdAt" | "type" | "profileImage"> & { password?: string }): Promise<boolean> => {
     setIsLoading(true);
-    const { data: authData, error: authError } = await supabase.auth.signUp({
+    if (inMemoryUsers.some(u => u.email === clientData.email)) {
+      showError("Este correo electrónico ya está registrado.");
+      setIsLoading(false);
+      return false;
+    }
+
+    const newClient: Client = {
+      id: `client-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      name: clientData.name,
       email: clientData.email,
-      password: clientData.password || "", // Password is required by Supabase Auth
-    });
-
-    if (authError) {
-      showError(`Error al registrar cliente: ${authError.message}`);
-      setIsLoading(false);
-      return false;
-    }
-
-    if (authData.user) {
-      const { error: profileError } = await supabase.from('users').insert([
-        {
-          id: authData.user.id,
-          name: clientData.name,
-          email: clientData.email,
-          state: clientData.state,
-          phone: clientData.phone,
-          type: "client",
-          created_at: Date.now(),
-          profile_image: null, // No image upload
-        }
-      ]);
-
-      if (profileError) {
-        console.error("Error inserting client profile:", profileError);
-        showError("Error al registrar cliente. Inténtalo de nuevo.");
-        await supabase.auth.admin.deleteUser(authData.user.id); // Clean up auth user if profile creation fails
-        setIsLoading(false);
-        return false;
-      }
-
-      const newUserProfile = await fetchUserProfile(authData.user.id);
-      if (newUserProfile) {
-        setCurrentUser(newUserProfile);
-        showSuccess("Registro de cliente exitoso. ¡Ahora estás logeado!");
-        setIsLoading(false);
-        return true;
-      }
-    }
+      state: clientData.state,
+      phone: clientData.phone,
+      type: "client",
+      createdAt: Date.now(),
+      profileImage: null,
+    };
+    inMemoryUsers.push(newClient);
+    setCurrentUser(newClient);
+    showSuccess("Registro de cliente exitoso. ¡Ahora estás logeado! (Modo Demo)");
     setIsLoading(false);
-    return false;
+    return true;
   };
 
-  const registerProvider = async (providerData: Omit<Provider, "id" | "createdAt" | "type" | "feedback" | "starRating" | "profileImage" | "serviceImage">): Promise<boolean> => {
+  const registerProvider = async (providerData: Omit<Provider, "id" | "createdAt" | "type" | "feedback" | "starRating" | "profileImage" | "serviceImage"> & { password?: string }): Promise<boolean> => {
     setIsLoading(true);
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: providerData.email,
-      password: providerData.password || "", // Password is required by Supabase Auth
-    });
-
-    if (authError) {
-      showError(`Error al registrar proveedor: ${authError.message}`);
+    if (inMemoryUsers.some(u => u.email === providerData.email)) {
+      showError("Este correo electrónico ya está registrado.");
       setIsLoading(false);
       return false;
     }
 
-    if (authData.user) {
-      const { error: profileError } = await supabase.from('users').insert([
-        {
-          id: authData.user.id,
-          name: providerData.name,
-          email: providerData.email,
-          state: providerData.state,
-          phone: providerData.phone,
-          type: "provider",
-          category: providerData.category,
-          service_title: providerData.serviceTitle,
-          service_description: providerData.serviceDescription,
-          service_image: null, // No image upload
-          rate: providerData.rate,
-          feedback: [],
-          star_rating: 0,
-          created_at: Date.now(),
-          profile_image: null, // No image upload
-        }
-      ]);
-
-      if (profileError) {
-        console.error("Error inserting provider profile:", profileError);
-        showError("Error al registrar proveedor. Inténtalo de nuevo.");
-        await supabase.auth.admin.deleteUser(authData.user.id);
-        setIsLoading(false);
-        return false;
-      }
-
-      const newProviderProfile = await fetchUserProfile(authData.user.id);
-      if (newProviderProfile) {
-        setCurrentUser(newProviderProfile);
-        showSuccess("Registro de proveedor exitoso. ¡Ahora estás logeado!");
-        setIsLoading(false);
-        return true;
-      }
-    }
+    const newProvider: Provider = {
+      id: `provider-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      name: providerData.name,
+      email: providerData.email,
+      state: providerData.state,
+      phone: providerData.phone,
+      type: "provider",
+      category: providerData.category,
+      serviceTitle: providerData.serviceTitle,
+      serviceDescription: providerData.serviceDescription,
+      serviceImage: null,
+      rate: providerData.rate,
+      feedback: [],
+      starRating: 0,
+      createdAt: Date.now(),
+      profileImage: null,
+    };
+    inMemoryUsers.push(newProvider);
+    setCurrentUser(newProvider);
+    showSuccess("Registro de proveedor exitoso. ¡Ahora estás logeado! (Modo Demo)");
     setIsLoading(false);
-    return false;
+    return true;
   };
 
   const updateUser = async (updatedUser: User) => {
     setIsLoading(true);
-
-    const { error } = await supabase.from('users').update({
-      name: updatedUser.name,
-      email: updatedUser.email, // Email update should ideally go through Supabase Auth
-      state: updatedUser.state,
-      phone: (updatedUser as Client).phone || (updatedUser as Provider).phone || null,
-      profile_image: null, // Always set to null as image upload is disabled
-      category: (updatedUser as Provider).category || null,
-      service_title: (updatedUser as Provider).serviceTitle || null,
-      service_description: (updatedUser as Provider).serviceDescription || null,
-      service_image: null, // Always set to null as image upload is disabled
-      rate: (updatedUser as Provider).rate || null,
-      feedback: (updatedUser as Provider).feedback || [],
-      star_rating: (updatedUser as Provider).starRating || 0,
-    }).eq('id', updatedUser.id);
-
-    if (error) {
-      console.error("Error updating user:", error);
-      showError("Error al actualizar la información.");
+    const index = inMemoryUsers.findIndex(u => u.id === updatedUser.id);
+    if (index !== -1) {
+      inMemoryUsers[index] = updatedUser as Client | Provider | Admin;
+      setCurrentUser(updatedUser); // Update current user state
+      showSuccess("Información actualizada correctamente. (Modo Demo)");
     } else {
-      // Re-fetch user profile to ensure state is consistent with DB
-      const updatedUserProfile = await fetchUserProfile(updatedUser.id);
-      if (updatedUserProfile) {
-        setCurrentUser(updatedUserProfile);
-        showSuccess("Información actualizada correctamente.");
-      } else {
-        showError("Información actualizada, pero no se pudo recargar el perfil.");
-      }
+      showError("Error al actualizar la información. Usuario no encontrado. (Modo Demo)");
     }
     setIsLoading(false);
   };
 
   const getAllProviders = async (): Promise<Provider[]> => {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('type', 'provider');
-
-    if (error) {
-      console.error("Error fetching providers:", error);
-      return [];
-    }
-    return data.map(p => ({
-      id: p.id,
-      name: p.name,
-      email: p.email,
-      state: p.state,
-      type: p.type as "provider",
-      createdAt: p.created_at,
-      profileImage: p.profile_image,
-      phone: p.phone,
-      category: p.category,
-      serviceTitle: p.service_title,
-      serviceDescription: p.service_description,
-      serviceImage: p.service_image,
-      rate: p.rate,
-      feedback: p.feedback || [],
-      starRating: p.star_rating || 0,
-    })) as Provider[];
+    return inMemoryUsers.filter((user): user is Provider => user.type === "provider");
   };
 
   const addFeedbackToProvider = async (
@@ -393,12 +221,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     type: FeedbackType,
     comment: string
   ) => {
-    const provider = await fetchUserProfile(providerId) as Provider;
-    if (!provider) {
-      showError("Proveedor no encontrado.");
+    const providerIndex = inMemoryUsers.findIndex(u => u.id === providerId && u.type === "provider");
+    if (providerIndex === -1) {
+      showError("Proveedor no encontrado para añadir feedback.");
       return;
     }
 
+    const provider = inMemoryUsers[providerIndex] as Provider;
     const currentFeedback = provider.feedback || [];
     const newFeedback: Feedback = {
       id: `feedback-${currentFeedback.length + 1}-${Date.now()}`,
@@ -410,13 +239,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
 
     const updatedFeedback = [...currentFeedback, newFeedback];
-    // Calculate star rating based on positive feedback count
     const positiveCount = updatedFeedback.filter(
       (f) => f.type === FeedbackType.Positive
     ).length;
-    // Simple star rating logic: 1 star for every 5 positive feedbacks, max 5 stars
     const newStarRating = Math.min(5, Math.floor(positiveCount / 5));
-
 
     const updatedProvider: Provider = {
       ...provider,
@@ -424,7 +250,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       starRating: newStarRating,
     };
 
-    await updateUser(updatedProvider);
+    inMemoryUsers[providerIndex] = updatedProvider; // Update in-memory array
+    // If the updated provider is the current user, update currentUser state
+    if (currentUser?.id === providerId) {
+      setCurrentUser(updatedProvider);
+    }
   };
 
   return (
@@ -437,7 +267,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         registerClient,
         registerProvider,
         findUserByEmail,
-        findUserById: fetchUserProfile,
+        findUserById,
         updateUser,
         getAllProviders,
         addFeedbackToProvider,
