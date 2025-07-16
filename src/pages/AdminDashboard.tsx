@@ -18,6 +18,12 @@ import React, { useMemo, useState, useEffect } from "react";
     const INITIAL_DISPLAY_LIMIT = 4;
     const LOAD_MORE_AMOUNT = 10;
 
+    // Importar las constantes de comisión desde ContractContext
+    // Nota: En un proyecto real, estas constantes podrían exportarse desde un archivo de configuración común.
+    // Para este ejercicio, las definimos aquí para que el AdminDashboard pueda usarlas directamente.
+    const PLATFORM_COMMISSION_PERCENTAGE = 0.10; // 10% de deducción del pago al proveedor
+    const CLIENT_PAYMENT_ADDITIONAL_COMMISSION_PERCENTAGE = 0.05; // 5% adicional que paga el cliente
+
     const AdminDashboard: React.FC = () => {
       const { currentUser, getAllUsers, isLoading: authLoading } = useAuth(); // Get getAllUsers
       const { contracts, resolveDispute } = useContracts();
@@ -50,13 +56,16 @@ import React, { useMemo, useState, useEffect } from "react";
       // Calculate Total Commissions Earned
       const totalCommissions = useMemo(() => {
         return contracts.reduce((total, contract) => {
-          if (contract.status === "finalized") {
-            return total + (contract.serviceRate * contract.commissionRate);
+          let contractCommission = 0;
+          // 5% from client when they deposit funds
+          if (contract.clientDeposited) {
+            contractCommission += contract.serviceRate * CLIENT_PAYMENT_ADDITIONAL_COMMISSION_PERCENTAGE;
           }
-          if (contract.status === "finalized_by_dispute" && contract.disputeResolution === "toProvider") {
-            return total + (contract.serviceRate * contract.commissionRate);
+          // 10% from provider when contract is finalized or resolved to provider
+          if (contract.status === "finalized" || (contract.status === "finalized_by_dispute" && contract.disputeResolution === "toProvider")) {
+            contractCommission += contract.serviceRate * PLATFORM_COMMISSION_PERCENTAGE;
           }
-          return total;
+          return total + contractCommission;
         }, 0);
       }, [contracts]);
 

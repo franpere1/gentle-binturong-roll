@@ -562,7 +562,7 @@ import React, { useState, useEffect, useMemo } from "react";
               isOpen={isPaymentModalOpen}
               onClose={() => setIsPaymentModalOpen(false)}
               serviceTitle={contractToPay.serviceTitle}
-              initialAmount={contractToPay.serviceRate}
+              negotiatedServiceRate={contractToPay.serviceRate} // Pass the negotiated service rate
               onConfirm={handlePaymentConfirmed}
             />
           )}

@@ -34,6 +34,10 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useCa
     const DEMO_PROVIDER_ID = "provider-789";
     const DEMO_ADMIN_ID = "admin-123"; // Aunque el admin no tiene contratos, es bueno tenerlo referenciado
 
+    // Nuevas constantes para las comisiones
+    const PLATFORM_COMMISSION_PERCENTAGE = 0.10; // 10% de deducción del pago al proveedor
+    const CLIENT_PAYMENT_ADDITIONAL_COMMISSION_PERCENTAGE = 0.05; // 5% adicional que paga el cliente
+
     // Contratos de demostración para poblar el dashboard del admin
     const defaultContracts: Contract[] = [
       {
@@ -46,7 +50,7 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useCa
         clientDeposited: true,
         clientAction: "finalize",
         providerAction: "finalize",
-        commissionRate: 0.10,
+        commissionRate: PLATFORM_COMMISSION_PERCENTAGE,
         createdAt: Date.now() - 500000,
         updatedAt: Date.now() - 400000,
         disputeResolution: undefined,
@@ -61,7 +65,7 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useCa
         clientDeposited: true,
         clientAction: "accept_offer",
         providerAction: "none",
-        commissionRate: 0.10,
+        commissionRate: PLATFORM_COMMISSION_PERCENTAGE,
         createdAt: Date.now() - 300000,
         updatedAt: Date.now() - 200000,
         disputeResolution: undefined,
@@ -76,7 +80,7 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useCa
         clientDeposited: true,
         clientAction: "dispute",
         providerAction: "finalize", // Proveedor finalizó, cliente disputó
-        commissionRate: 0.10,
+        commissionRate: PLATFORM_COMMISSION_PERCENTAGE,
         createdAt: Date.now() - 150000,
         updatedAt: Date.now() - 100000,
         disputeResolution: undefined,
@@ -91,7 +95,7 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useCa
         clientDeposited: true,
         clientAction: "dispute",
         providerAction: "finalize",
-        commissionRate: 0.10,
+        commissionRate: PLATFORM_COMMISSION_PERCENTAGE,
         createdAt: Date.now() - 700000,
         updatedAt: Date.now() - 600000,
         disputeResolution: "toProvider", // Resuelta a favor del proveedor
@@ -201,7 +205,7 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useCa
           clientDeposited: false,
           clientAction: "none",
           providerAction: "none",
-          commissionRate: 0.10,
+          commissionRate: PLATFORM_COMMISSION_PERCENTAGE, // Usar la constante
           createdAt: Date.now(),
           updatedAt: Date.now(),
         };

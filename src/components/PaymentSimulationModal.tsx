@@ -16,24 +16,26 @@ interface PaymentSimulationModalProps {
   isOpen: boolean;
   onClose: () => void;
   serviceTitle: string;
-  initialAmount: number;
-  onConfirm: (finalAmount: number) => void;
+  negotiatedServiceRate: number; // Changed prop name to reflect it's the base rate
+  onConfirm: (finalAmount: number) => void; // This finalAmount is the negotiated service rate
 }
 
 const PaymentSimulationModal: React.FC<PaymentSimulationModalProps> = ({
   isOpen,
   onClose,
   serviceTitle,
-  initialAmount,
+  negotiatedServiceRate, // Changed prop name
   onConfirm,
 }) => {
-  const negotiatedAmount = initialAmount;
-
   // New states for simulated card details
   const [cardNumber, setCardNumber] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
   const [cvv, setCvv] = useState("");
   const [cardholderName, setCardholderName] = useState("");
+
+  // Calculate the total amount the client pays, including the 5% commission
+  const CLIENT_PAYMENT_ADDITIONAL_COMMISSION_PERCENTAGE = 0.05;
+  const clientPaymentAmount = negotiatedServiceRate * (1 + CLIENT_PAYMENT_ADDITIONAL_COMMISSION_PERCENTAGE);
 
   const handleConfirmPayment = () => {
     // Basic validation for simulation
@@ -54,13 +56,9 @@ const PaymentSimulationModal: React.FC<PaymentSimulationModalProps> = ({
       return;
     }
 
-    const finalAmount = parseFloat(String(negotiatedAmount));
-    if (isNaN(finalAmount) || finalAmount <= 0) {
-      showError("Monto de pago inválido.");
-      return;
-    }
-
-    onConfirm(finalAmount);
+    // The `onConfirm` callback should receive the original negotiated service rate,
+    // as that's what's stored in the contract. The client's extra payment is a fee.
+    onConfirm(negotiatedServiceRate);
     onClose();
   };
 
@@ -97,14 +95,20 @@ const PaymentSimulationModal: React.FC<PaymentSimulationModalProps> = ({
             <span className="font-semibold">Servicio:</span> {serviceTitle}
           </p>
           <div>
-            <Label htmlFor="payment-amount" className="text-center block mb-2">Monto a Pagar (USD)</Label>
+            <Label htmlFor="payment-amount" className="text-center block mb-2">Monto del Servicio (USD)</Label>
             <Input
               id="payment-amount"
               type="number"
-              value={negotiatedAmount.toFixed(2)}
+              value={negotiatedServiceRate.toFixed(2)} // Display negotiated rate
               readOnly
               className="mt-1 font-bold text-lg text-center"
             />
+          </div>
+          <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
+            (Incluye una comisión del 5% para la plataforma)
+          </p>
+          <div className="text-center text-2xl font-bold text-blue-600 dark:text-blue-400">
+            Total a Pagar: ${clientPaymentAmount.toFixed(2)} USD
           </div>
 
           <div className="space-y-3 mt-4">
