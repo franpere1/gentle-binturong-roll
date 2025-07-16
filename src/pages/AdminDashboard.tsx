@@ -33,11 +33,14 @@ import React, { useMemo, useState, useEffect } from "react";
       const [resolvedDisputesLimit, setResolvedDisputesLimit] = useState(INITIAL_DISPLAY_LIMIT);
       const [allUsersMap, setAllUsersMap] = useState<Map<string, User>>(new Map()); // Map to store all users
       const [localExchangeRateInput, setLocalExchangeRateInput] = useState<string>(exchangeRate.toFixed(2)); // State for the input field
+      const [isEditingExchangeRate, setIsEditingExchangeRate] = useState(false); // New state for editing mode
 
-      // Sync local input with context exchangeRate
+      // Sync local input with context exchangeRate when exchangeRate changes or entering edit mode
       useEffect(() => {
-        setLocalExchangeRateInput(exchangeRate.toFixed(2));
-      }, [exchangeRate]);
+        if (!isEditingExchangeRate) { // Only update if not currently editing
+          setLocalExchangeRateInput(exchangeRate.toFixed(2));
+        }
+      }, [exchangeRate, isEditingExchangeRate]);
 
       // Fetch all users once to display names in contracts
       useEffect(() => {
@@ -136,6 +139,17 @@ import React, { useMemo, useState, useEffect } from "react";
       const handleSaveExchangeRate = async () => {
         const rate = parseFloat(localExchangeRateInput);
         await setExchangeRate(rate);
+        setIsEditingExchangeRate(false); // Exit editing mode after saving
+      };
+
+      const handleEditRateClick = () => {
+        setLocalExchangeRateInput(exchangeRate.toFixed(2)); // Pre-fill with current rate
+        setIsEditingExchangeRate(true);
+      };
+
+      const handleCancelEditRate = () => {
+        setLocalExchangeRateInput(exchangeRate.toFixed(2)); // Revert to current rate
+        setIsEditingExchangeRate(false);
       };
 
       if (authLoading) {
@@ -216,26 +230,39 @@ import React, { useMemo, useState, useEffect } from "react";
 
               <div className="mb-8 p-6 border rounded-lg bg-gray-50 dark:bg-gray-700">
                 <h2 className="text-2xl font-bold mb-4 text-center">Configuración de Tasa de Cambio</h2>
-                <div className="flex flex-col sm:flex-row items-center gap-4">
-                  <div className="flex-grow w-full sm:w-auto">
-                    <Label htmlFor="exchange-rate" className="sr-only">Tasa Oficial (VEF/USD)</Label>
-                    <Input
-                      id="exchange-rate"
-                      type="number"
-                      step="0.01"
-                      value={localExchangeRateInput}
-                      onChange={(e) => setLocalExchangeRateInput(e.target.value)}
-                      placeholder="Ej: 36.50"
-                      className="text-center text-lg"
-                    />
+                {!isEditingExchangeRate ? (
+                  <div className="flex flex-col items-center gap-4">
+                    <Button onClick={handleEditRateClick} className="w-full sm:w-auto">
+                      Editar Tasa Oficial (VEF/USD)
+                    </Button>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
+                      Tasa Oficial BCV: 1 USD = {exchangeRate.toFixed(2)} VEF
+                    </p>
                   </div>
-                  <Button onClick={handleSaveExchangeRate} className="w-full sm:w-auto">
-                    Actualizar Tasa Oficial (VEF/USD)
-                  </Button>
-                </div>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 text-center">
-                  Tasa Oficial BCV: 1 USD = {exchangeRate.toFixed(2)} VEF
-                </p>
+                ) : (
+                  <div className="flex flex-col sm:flex-row items-center gap-4">
+                    <div className="flex-grow w-full sm:w-auto">
+                      <Label htmlFor="exchange-rate" className="sr-only">Tasa Oficial (VEF/USD)</Label>
+                      <Input
+                        id="exchange-rate"
+                        type="number"
+                        step="0.01"
+                        value={localExchangeRateInput}
+                        onChange={(e) => setLocalExchangeRateInput(e.target.value)}
+                        placeholder="Ej: 36.50"
+                        className="text-center text-lg"
+                      />
+                    </div>
+                    <div className="flex gap-2 w-full sm:w-auto">
+                      <Button onClick={handleSaveExchangeRate} className="flex-grow">
+                        Guardar Tasa
+                      </Button>
+                      <Button variant="outline" onClick={handleCancelEditRate} className="flex-grow">
+                        Cancelar
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <h2 className="text-2xl font-bold mb-4 text-center">Disputas Activas</h2>
