@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from "react";
     import { Contract, User } from "@/types";
-    import { useAuth } from "@/context/AuthContext"; // Cambiado de "./AuthContext"
+    import { useAuth } from "@/context/AuthContext";
     import { useChat } from "./ChatContext";
     import { showSuccess, showError } from "@/utils/toast";
 
@@ -27,30 +27,53 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useCa
       children: ReactNode;
     }
 
-    // In-memory storage for contracts (simulating a database)
-    let inMemoryContracts: Contract[] = [];
+    const LOCAL_STORAGE_CONTRACTS_KEY = "te_lo_hago_contracts";
+
+    // Helper to load contracts from localStorage
+    const loadContractsFromLocalStorage = (): Contract[] => {
+      try {
+        const storedContracts = localStorage.getItem(LOCAL_STORAGE_CONTRACTS_KEY);
+        if (storedContracts) {
+          return JSON.parse(storedContracts);
+        }
+      } catch (error) {
+        console.error("Error loading contracts from localStorage:", error);
+      }
+      return [];
+    };
+
+    // Helper to save contracts to localStorage
+    const saveContractsToLocalStorage = (contracts: Contract[]) => {
+      try {
+        localStorage.setItem(LOCAL_STORAGE_CONTRACTS_KEY, JSON.stringify(contracts));
+      } catch (error) {
+        console.error("Error saving contracts to localStorage:", error);
+      }
+    };
 
     export const ContractProvider: React.FC<ContractProviderProps> = ({ children }) => {
       const { currentUser } = useAuth();
       const { clearConversationMessages } = useChat();
-      const [contracts, setContracts] = useState<Contract[]>(inMemoryContracts);
+      // Initialize contracts state with data from localStorage
+      const [contracts, setContracts] = useState<Contract[]>(() => loadContractsFromLocalStorage());
 
-      // Update local state when inMemoryContracts changes (simulating real-time)
-      useEffect(() => {
-        setContracts(inMemoryContracts);
-      }, []); // Only run once on mount, subsequent changes will be direct state updates
+      // Function to update contracts state and save to localStorage
+      const updateAndSaveContracts = useCallback((newContracts: Contract[]) => {
+        setContracts(newContracts);
+        saveContractsToLocalStorage(newContracts);
+      }, []);
 
       const hasActiveOrPendingContract = useCallback((clientId: string, providerId: string): boolean => {
-        return inMemoryContracts.some(
+        return contracts.some( // Use the state variable 'contracts'
           (contract) =>
             contract.clientId === clientId &&
             contract.providerId === providerId &&
             (contract.status === "pending" || contract.status === "offered" || contract.status === "active")
         );
-      }, []);
+      }, [contracts]); // Depend on 'contracts' state
 
       const getLatestContractBetweenUsers = useCallback((user1Id: string, user2Id: string): Contract | null => {
-        const relevantContracts = inMemoryContracts.filter(
+        const relevantContracts = contracts.filter( // Use the state variable 'contracts'
           (c) =>
             (c.clientId === user1Id && c.providerId === user2Id) ||
             (c.clientId === user2Id && c.providerId === user1Id)
@@ -59,7 +82,7 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useCa
 
         relevantContracts.sort((a, b) => b.createdAt - a.createdAt);
         return relevantContracts[0];
-      }, []);
+      }, [contracts]); // Depend on 'contracts' state
 
       const createContract = async (
         clientId: string,
@@ -91,8 +114,7 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useCa
           updatedAt: Date.now(),
         };
 
-        inMemoryContracts.push(newContract);
-        setContracts([...inMemoryContracts]); // Force re-render
+        updateAndSaveContracts([...contracts, newContract]); // Use updateAndSaveContracts
         showSuccess("Contrato creado con éxito. El proveedor ha sido notificado para hacer una oferta. (Modo Demo)");
         return newContract;
       };
@@ -103,12 +125,12 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useCa
           return;
         }
 
-        const contractIndex = inMemoryContracts.findIndex(c => c.id === contractId);
+        const contractIndex = contracts.findIndex(c => c.id === contractId); // Use contracts state
         if (contractIndex === -1) {
           showError("Contrato no encontrado.");
           return;
         }
-        const contract = inMemoryContracts[contractIndex];
+        const contract = contracts[contractIndex]; // Use contracts state
 
         if (contract.status !== "pending" || contract.providerId !== currentUser.id) {
           showError("No puedes hacer una oferta en este contrato o no tienes permiso.");
@@ -123,8 +145,9 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useCa
           updatedAt: Date.now(),
         };
 
-        inMemoryContracts[contractIndex] = updatedContract;
-        setContracts([...inMemoryContracts]); // Force re-render
+        const newContracts = [...contracts]; // Create a new array
+        newContracts[contractIndex] = updatedContract;
+        updateAndSaveContracts(newContracts); // Use updateAndSaveContracts
         showSuccess(`Oferta de $${newRate.toFixed(2)} USD enviada para el servicio "${contract.serviceTitle}". (Modo Demo)`);
       };
 
@@ -134,12 +157,12 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useCa
           return false;
         }
 
-        const contractIndex = inMemoryContracts.findIndex(c => c.id === contractId);
+        const contractIndex = contracts.findIndex(c => c.id === contractId); // Use contracts state
         if (contractIndex === -1) {
           showError("Contrato no encontrado.");
           return false;
         }
-        const contract = inMemoryContracts[contractIndex];
+        const contract = contracts[contractIndex]; // Use contracts state
 
         if (contract.status !== "offered" || contract.clientDeposited || contract.clientId !== currentUser.id) {
           showError("No puedes depositar fondos en este contrato o ya han sido depositados.");
@@ -154,8 +177,9 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useCa
           updatedAt: Date.now(),
         };
 
-        inMemoryContracts[contractIndex] = updatedContract;
-        setContracts([...inMemoryContracts]); // Force re-render
+        const newContracts = [...contracts]; // Create a new array
+        newContracts[contractIndex] = updatedContract;
+        updateAndSaveContracts(newContracts); // Use updateAndSaveContracts
         showSuccess(`Fondos depositados para el servicio "${contract.serviceTitle}". El proveedor ha sido notificado. (Modo Demo)`);
         return true;
       };
@@ -163,12 +187,12 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useCa
       const handleContractAction = async (contractId: string, actorId: string, actionType: 'finalize' | 'cancel' | 'dispute' | 'cancel_dispute') => {
         console.log(`ContractContext: handleContractAction called for contract ${contractId} by actor ${actorId} with action ${actionType}`);
 
-        const contractIndex = inMemoryContracts.findIndex(c => c.id === contractId);
+        const contractIndex = contracts.findIndex(c => c.id === contractId); // Use contracts state
         if (contractIndex === -1) {
           showError("Contrato no encontrado.");
           return;
         }
-        let contract = inMemoryContracts[contractIndex];
+        let contract = contracts[contractIndex]; // Use contracts state
 
         let updatedContract = { ...contract, updatedAt: Date.now() };
         let updatePayload: Partial<Contract> = { updatedAt: Date.now() };
@@ -181,8 +205,9 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useCa
               updatedContract.clientAction = "cancel";
               showSuccess(`Contrato "${updatedContract.serviceTitle}" cancelado por el cliente. (Modo Demo)`);
               await clearConversationMessages(updatedContract.clientId, updatedContract.providerId);
-              inMemoryContracts[contractIndex] = updatedContract;
-              setContracts([...inMemoryContracts]);
+              const newContracts = [...contracts];
+              newContracts[contractIndex] = updatedContract;
+              updateAndSaveContracts(newContracts);
               return;
             }
           } else if (actorId === contract.providerId) {
@@ -191,8 +216,9 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useCa
               updatedContract.providerAction = "cancel";
               showSuccess(`Solicitud de contrato para "${updatedContract.serviceTitle}" rechazada por el proveedor. (Modo Demo)`);
               await clearConversationMessages(updatedContract.clientId, updatedContract.providerId);
-              inMemoryContracts[contractIndex] = updatedContract;
-              setContracts([...inMemoryContracts]);
+              const newContracts = [...contracts];
+              newContracts[contractIndex] = updatedContract;
+              updateAndSaveContracts(newContracts);
               return;
             }
           }
@@ -206,8 +232,9 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useCa
               updatedContract.status = "active";
               updatedContract.clientAction = "accept_offer"; // Revert client action to accepted
               showSuccess(`Disputa para el contrato "${updatedContract.serviceTitle}" cancelada. Puedes proceder a finalizar el contrato. (Modo Demo)`);
-              inMemoryContracts[contractIndex] = updatedContract;
-              setContracts([...inMemoryContracts]);
+              const newContracts = [...contracts];
+              newContracts[contractIndex] = updatedContract;
+              updateAndSaveContracts(newContracts);
               return;
             } else {
               showError("No se puede cancelar la disputa en el estado actual del contrato.");
@@ -238,8 +265,9 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useCa
               updatedContract.clientAction = "dispute";
               updatedContract.status = "disputed";
               showSuccess(`Disputa iniciada para el contrato "${updatedContract.serviceTitle}". Los fondos permanecen retenidos hasta la resolución. (Modo Demo)`);
-              inMemoryContracts[contractIndex] = updatedContract;
-              setContracts([...inMemoryContracts]);
+              const newContracts = [...contracts];
+              newContracts[contractIndex] = updatedContract;
+              updateAndSaveContracts(newContracts);
               return;
             } else {
               showError("Solo puedes iniciar una disputa en un contrato activo, con fondos depositados, y si no has tomado una acción final (finalizar/cancelar/disputar).");
@@ -315,19 +343,20 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useCa
           }
         }
 
-        inMemoryContracts[contractIndex] = updatedContract;
-        setContracts([...inMemoryContracts]); // Force re-render
+        const newContracts = [...contracts];
+        newContracts[contractIndex] = updatedContract;
+        updateAndSaveContracts(newContracts); // Use updateAndSaveContracts
       };
 
       const resolveDispute = async (contractId: string, resolutionType: 'toClient' | 'toProvider') => {
         console.log(`ContractContext: resolveDispute called for contract ${contractId} with resolution ${resolutionType}`);
 
-        const contractIndex = inMemoryContracts.findIndex(c => c.id === contractId);
+        const contractIndex = contracts.findIndex(c => c.id === contractId); // Use contracts state
         if (contractIndex === -1) {
           showError("Contrato no encontrado.");
           return;
         }
-        let contract = inMemoryContracts[contractIndex];
+        let contract = contracts[contractIndex]; // Use contracts state
 
         if (contract.status !== "disputed") {
           showError("No se puede resolver la disputa en este contrato o no está en disputa.");
@@ -349,17 +378,18 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useCa
           updatedAt: Date.now(),
         };
 
-        inMemoryContracts[contractIndex] = updatedContract;
-        setContracts([...inMemoryContracts]); // Force re-render
+        const newContracts = [...contracts];
+        newContracts[contractIndex] = updatedContract;
+        updateAndSaveContracts(newContracts); // Use updateAndSaveContracts
         showSuccess(message);
         await clearConversationMessages(contract.clientId, contract.providerId);
       };
 
       const getContractsForUser = useCallback((userId: string): Contract[] => {
-        return inMemoryContracts.filter(
+        return contracts.filter( // Use contracts state
           (contract) => contract.clientId === userId || contract.providerId === userId
         );
-      }, []);
+      }, [contracts]); // Depend on 'contracts' state
 
       return (
         <ContractContext.Provider

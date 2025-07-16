@@ -30,10 +30,17 @@ import React, { useState, useEffect, useMemo } from "react";
     import { showError } from "@/utils/toast";
 
     const ClientDashboard: React.FC = () => {
-      const { currentUser, getAllProviders, findUserById } = useAuth();
+      const { currentUser, getAllProviders, findUserById, isLoading: authLoading } = useAuth();
       const { getContractsForUser, handleContractAction, depositFunds, contracts, createContract } = useContracts();
       const { hasUnreadMessages } = useChat();
-      const client = currentUser as Client;
+      
+      const client = useMemo(() => {
+        if (!authLoading && currentUser && currentUser.type === "client") {
+          return currentUser as Client;
+        }
+        return null;
+      }, [authLoading, currentUser]);
+
       const [isEditing, setIsEditing] = useState(false);
       const [searchTermProviders, setSearchTermProviders] = useState("");
       const [searchTermContracts, setSearchTermContracts] = useState("");
@@ -194,6 +201,22 @@ import React, { useState, useEffect, useMemo } from "react";
         }
       };
 
+      if (authLoading) {
+        return (
+          <div className="min-h-screen flex flex-col">
+            <Header />
+            <div className="flex-grow flex items-center justify-center bg-gray-100 dark:bg-gray-900 p-4">
+              <div className="text-center p-4">
+                <h1 className="text-4xl font-bold mb-4 text-gray-800 dark:text-gray-100">
+                  Cargando información del usuario...
+                </h1>
+              </div>
+            </div>
+            <MadeWithDyad />
+          </div>
+        );
+      }
+
       if (!client) {
         return (
           <div className="min-h-screen flex flex-col">
@@ -201,8 +224,11 @@ import React, { useState, useEffect, useMemo } from "react";
             <div className="flex-grow flex items-center justify-center bg-gray-100 dark:bg-gray-900 p-4">
               <div className="text-center p-4">
                 <h1 className="text-4xl font-bold mb-4 text-gray-800 dark:text-gray-100">
-                  Cargando información del cliente...
+                  Acceso Denegado
                 </h1>
+                <p className="text-xl text-gray-600 dark:text-gray-300">
+                  Solo los clientes pueden acceder a este panel.
+                </p>
               </div>
             </div>
             <MadeWithDyad />

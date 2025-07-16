@@ -3,7 +3,7 @@ import React, { useMemo, useState, useEffect } from "react";
     import { MadeWithDyad } from "@/components/made-with-dyad";
     import { useAuth } from "@/context/AuthContext";
     import { useContracts } from "@/context/ContractContext";
-    import { Contract, Client, Provider } from "@/types";
+    import { Contract, Client, Provider, User } from "@/types";
     import { Button } from "@/components/ui/button";
     import {
       Card,
@@ -19,7 +19,7 @@ import React, { useMemo, useState, useEffect } from "react";
     const LOAD_MORE_AMOUNT = 10;
 
     const AdminDashboard: React.FC = () => {
-      const { currentUser, findUserById, getAllProviders } = useAuth();
+      const { currentUser, findUserById, getAllProviders, isLoading: authLoading } = useAuth();
       const { contracts, resolveDispute } = useContracts();
       const [searchTermDisputes, setSearchTermDisputes] = useState("");
       const [activeDisputesLimit, setActiveDisputesLimit] = useState(INITIAL_DISPLAY_LIMIT);
@@ -124,6 +124,22 @@ import React, { useMemo, useState, useEffect } from "react";
           showError("Solo un administrador puede resolver disputas.");
         }
       };
+
+      if (authLoading) {
+        return (
+          <div className="min-h-screen flex flex-col">
+            <Header />
+            <div className="flex-grow flex items-center justify-center bg-gray-100 dark:bg-gray-900 p-4">
+              <div className="text-center p-4">
+                <h1 className="text-4xl font-bold mb-4 text-gray-800 dark:text-gray-100">
+                  Cargando información del usuario...
+                </h1>
+              </div>
+            </div>
+            <MadeWithDyad />
+          </div>
+        );
+      }
 
       if (currentUser?.type !== "admin") {
         return (

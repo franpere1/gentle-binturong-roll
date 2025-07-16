@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from "react";
     import { Message, User } from "@/types";
-    import { useAuth } from "@/context/AuthContext"; // Cambiado de "./AuthContext"
+    import { useAuth } from "@/context/AuthContext";
 
     interface ChatContextType {
       messages: Message[];
@@ -17,17 +17,40 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useCa
       children: ReactNode;
     }
 
-    // In-memory storage for messages (simulating a database)
-    let inMemoryMessages: Message[] = [];
+    const LOCAL_STORAGE_MESSAGES_KEY = "te_lo_hago_messages";
+
+    // Helper to load messages from localStorage
+    const loadMessagesFromLocalStorage = (): Message[] => {
+      try {
+        const storedMessages = localStorage.getItem(LOCAL_STORAGE_MESSAGES_KEY);
+        if (storedMessages) {
+          return JSON.parse(storedMessages);
+        }
+      } catch (error) {
+        console.error("Error loading messages from localStorage:", error);
+      }
+      return [];
+    };
+
+    // Helper to save messages to localStorage
+    const saveMessagesToLocalStorage = (messages: Message[]) => {
+      try {
+        localStorage.setItem(LOCAL_STORAGE_MESSAGES_KEY, JSON.stringify(messages));
+      } catch (error) {
+        console.error("Error saving messages to localStorage:", error);
+      }
+    };
 
     export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
       const { currentUser } = useAuth();
-      const [allMessages, setAllMessages] = useState<Message[]>(inMemoryMessages);
+      // Initialize messages state with data from localStorage
+      const [allMessages, setAllMessages] = useState<Message[]>(() => loadMessagesFromLocalStorage());
 
-      // Update local state when inMemoryMessages changes (simulating real-time)
-      useEffect(() => {
-        setAllMessages(inMemoryMessages);
-      }, []); // Only run once on mount, subsequent changes will be direct state updates
+      // Function to update messages state and save to localStorage
+      const updateAndSaveMessages = useCallback((newMessages: Message[]) => {
+        setAllMessages(newMessages);
+        saveMessagesToLocalStorage(newMessages);
+      }, []);
 
       const sendMessage = async (receiverId: string, text: string) => {
         if (!currentUser) {
@@ -44,8 +67,7 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useCa
           readBy: [], // Initially read by no one
         };
 
-        inMemoryMessages.push(newMessage);
-        setAllMessages([...inMemoryMessages]); // Force re-render
+        updateAndSaveMessages([...allMessages, newMessage]); // Use updateAndSaveMessages
         console.log("Message sent (in-memory):", newMessage);
       };
 
@@ -61,12 +83,12 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useCa
       }, [allMessages, currentUser]);
 
       const clearConversationMessages = async (user1Id: string, user2Id: string) => {
-        inMemoryMessages = inMemoryMessages.filter(
+        const newMessages = allMessages.filter( // Use allMessages state
           (msg) =>
             !((msg.senderId === user1Id && msg.receiverId === user2Id) ||
               (msg.senderId === user2Id && msg.receiverId === user1Id))
         );
-        setAllMessages([...inMemoryMessages]); // Force re-render
+        updateAndSaveMessages(newMessages); // Use updateAndSaveMessages
         console.log("Conversation messages cleared (in-memory).");
       };
 
@@ -74,7 +96,7 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useCa
         if (!currentUser) return;
 
         let updated = false;
-        inMemoryMessages = inMemoryMessages.map(msg => {
+        const newMessages = allMessages.map(msg => { // Use allMessages state
           if (
             msg.senderId === otherUserId &&
             msg.receiverId === currentUser.id &&
@@ -90,21 +112,21 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useCa
         });
 
         if (updated) {
-          setAllMessages([...inMemoryMessages]); // Force re-render
+          updateAndSaveMessages(newMessages); // Use updateAndSaveMessages
           console.log("Messages marked as read (in-memory).");
         }
-      }, [currentUser]);
+      }, [allMessages, currentUser]); // Depend on allMessages state
 
       const hasUnreadMessages = useCallback((otherUserId: string): boolean => {
         if (!currentUser) return false;
 
-        return allMessages.some(
+        return allMessages.some( // Use allMessages state
           (msg) =>
             msg.senderId === otherUserId &&
             msg.receiverId === currentUser.id &&
             !msg.readBy?.includes(currentUser.id)
         );
-      }, [allMessages, currentUser]);
+      }, [allMessages, currentUser]); // Depend on allMessages state
 
       return (
         <ChatContext.Provider value={{ messages: allMessages, sendMessage, getMessagesForConversation, clearConversationMessages, markMessagesAsRead, hasUnreadMessages }}>

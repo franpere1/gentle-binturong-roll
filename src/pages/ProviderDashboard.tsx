@@ -33,10 +33,17 @@ import React, { useState, useMemo, useEffect } from "react";
     const COMMENT_TRUNCATE_LENGTH = 150;
 
     const ProviderDashboard: React.FC = () => {
-      const { currentUser, findUserById } = useAuth();
+      const { currentUser, findUserById, isLoading: authLoading } = useAuth();
       const { getContractsForUser, handleContractAction, makeOffer, contracts } = useContracts();
       const { hasUnreadMessages } = useChat();
-      const provider = currentUser as Provider;
+      
+      const provider = useMemo(() => {
+        if (!authLoading && currentUser && currentUser.type === "provider") {
+          return currentUser as Provider;
+        }
+        return null;
+      }, [authLoading, currentUser]);
+
       const [isEditing, setIsEditing] = useState(false);
       const [searchTermContracts, setSearchTermContracts] = useState("");
       const [isMakeOfferModalOpen, setIsMakeOfferModalOpen] = useState(false);
@@ -142,6 +149,22 @@ import React, { useState, useMemo, useEffect } from "react";
         }
       };
 
+      if (authLoading) {
+        return (
+          <div className="min-h-screen flex flex-col">
+            <Header />
+            <div className="flex-grow flex items-center justify-center bg-gray-100 dark:bg-gray-900 p-4">
+              <div className="text-center p-4">
+                <h1 className="text-4xl font-bold mb-4 text-gray-800 dark:text-gray-100">
+                  Cargando información del usuario...
+                </h1>
+              </div>
+            </div>
+            <MadeWithDyad />
+          </div>
+        );
+      }
+
       if (!provider) {
         return (
           <div className="min-h-screen flex flex-col">
@@ -149,8 +172,11 @@ import React, { useState, useMemo, useEffect } from "react";
             <div className="flex-grow flex items-center justify-center bg-gray-100 dark:bg-gray-900 p-4">
               <div className="text-center p-4">
                 <h1 className="text-4xl font-bold mb-4 text-gray-800 dark:text-gray-100">
-                  Cargando información del proveedor...
+                  Acceso Denegado
                 </h1>
+                <p className="text-xl text-gray-600 dark:text-gray-300">
+                  Solo los proveedores pueden acceder a este panel.
+                </p>
               </div>
             </div>
             <MadeWithDyad />
