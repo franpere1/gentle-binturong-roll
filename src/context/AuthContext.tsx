@@ -26,6 +26,8 @@ interface AuthContextType {
     type: FeedbackType,
     comment: string
   ) => Promise<void>;
+  exchangeRate: number; // Nueva propiedad para la tasa de cambio
+  setExchangeRate: (rate: number) => Promise<void>; // Nueva función para actualizar la tasa
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -36,6 +38,7 @@ interface AuthProviderProps {
 
 const LOCAL_STORAGE_USERS_KEY = "te_lo_hago_users";
 const LOCAL_STORAGE_CURRENT_USER_ID_KEY = "te_lo_hago_current_user_id";
+const LOCAL_STORAGE_EXCHANGE_RATE_KEY = "te_lo_hago_exchange_rate"; // Nueva clave para la tasa de cambio
 
 // Default users for initial setup
 const defaultAdmin: Admin = {
@@ -99,6 +102,28 @@ const saveUsersToLocalStorage = (users: (Client | Provider | Admin)[]) => {
     localStorage.setItem(LOCAL_STORAGE_USERS_KEY, JSON.stringify(users));
   } catch (error) {
     console.error("Error saving users to localStorage:", error);
+  );
+};
+
+// Helper to load exchange rate from localStorage
+const loadExchangeRateFromLocalStorage = (): number => {
+  try {
+    const storedRate = localStorage.getItem(LOCAL_STORAGE_EXCHANGE_RATE_KEY);
+    if (storedRate) {
+      return parseFloat(storedRate);
+    }
+  } catch (error) {
+    console.error("Error loading exchange rate from localStorage:", error);
+  }
+  return 36.5; // Default rate
+};
+
+// Helper to save exchange rate to localStorage
+const saveExchangeRateToLocalStorage = (rate: number) => {
+  try {
+    localStorage.setItem(LOCAL_STORAGE_EXCHANGE_RATE_KEY, rate.toString());
+  } catch (error) {
+    console.error("Error saving exchange rate to localStorage:", error);
   }
 };
 
@@ -128,6 +153,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [exchangeRate, setExchangeRateState] = useState<number>(() => loadExchangeRateFromLocalStorage());
 
   // Load current user from localStorage on initial mount
   useEffect(() => {
@@ -302,6 +328,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const positiveCount = updatedFeedback.filter(
       (f) => f.type === FeedbackType.Positive
     ).length;
+    // Calculate star rating based on positive feedback count (e.g., 1 star per 5 positive feedbacks)
     const newStarRating = Math.min(5, Math.floor(positiveCount / 5));
 
     const updatedProvider: Provider = {
@@ -319,6 +346,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const setExchangeRate = async (rate: number) => {
+    if (isNaN(rate) || rate <= 0) {
+      showError("La tasa de cambio debe ser un número positivo.");
+      return;
+    }
+    setExchangeRateState(rate);
+    saveExchangeRateToLocalStorage(rate);
+    showSuccess(`Tasa de cambio actualizada a ${rate.toFixed(2)} VEF/USD. (Modo Demo)`);
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -334,6 +371,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         getAllProviders,
         getAllUsers,
         addFeedbackToProvider,
+        exchangeRate,
+        setExchangeRate,
       }}
     >
       {children}

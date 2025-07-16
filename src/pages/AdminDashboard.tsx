@@ -14,6 +14,7 @@ import React, { useMemo, useState, useEffect } from "react";
     } from "@/components/ui/card";
     import { Input } from "@/components/ui/input";
     import { showError, showSuccess } from "@/utils/toast";
+    import { Label } from "@/components/ui/label";
 
     const INITIAL_DISPLAY_LIMIT = 4;
     const LOAD_MORE_AMOUNT = 10;
@@ -25,12 +26,18 @@ import React, { useMemo, useState, useEffect } from "react";
     const CLIENT_PAYMENT_ADDITIONAL_COMMISSION_PERCENTAGE = 0.05; // 5% adicional que paga el cliente
 
     const AdminDashboard: React.FC = () => {
-      const { currentUser, getAllUsers, isLoading: authLoading } = useAuth(); // Get getAllUsers
+      const { currentUser, getAllUsers, isLoading: authLoading, exchangeRate, setExchangeRate } = useAuth(); // Get getAllUsers and exchangeRate
       const { contracts, resolveDispute } = useContracts();
       const [searchTermDisputes, setSearchTermDisputes] = useState("");
       const [activeDisputesLimit, setActiveDisputesLimit] = useState(INITIAL_DISPLAY_LIMIT);
       const [resolvedDisputesLimit, setResolvedDisputesLimit] = useState(INITIAL_DISPLAY_LIMIT);
       const [allUsersMap, setAllUsersMap] = useState<Map<string, User>>(new Map()); // Map to store all users
+      const [localExchangeRateInput, setLocalExchangeRateInput] = useState<string>(exchangeRate.toFixed(2)); // State for the input field
+
+      // Sync local input with context exchangeRate
+      useEffect(() => {
+        setLocalExchangeRateInput(exchangeRate.toFixed(2));
+      }, [exchangeRate]);
 
       // Fetch all users once to display names in contracts
       useEffect(() => {
@@ -126,6 +133,11 @@ import React, { useMemo, useState, useEffect } from "react";
         }
       };
 
+      const handleSaveExchangeRate = async () => {
+        const rate = parseFloat(localExchangeRateInput);
+        await setExchangeRate(rate);
+      };
+
       if (authLoading) {
         return (
           <div className="min-h-screen flex flex-col">
@@ -193,6 +205,7 @@ import React, { useMemo, useState, useEffect } from "react";
                     <CardDescription className="text-green-600 dark:text-green-400">
                       Ganancias de la plataforma por servicios finalizados.
                     </CardDescription>
+                  </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <p className="text-4xl font-bold text-green-800 dark:text-green-200">
@@ -200,6 +213,30 @@ import React, { useMemo, useState, useEffect } from "react";
                     </p>
                   </CardContent>
                 </Card>
+              </div>
+
+              <div className="mb-8 p-6 border rounded-lg bg-gray-50 dark:bg-gray-700">
+                <h2 className="text-2xl font-bold mb-4 text-center">Configuración de Tasa de Cambio</h2>
+                <div className="flex flex-col sm:flex-row items-center gap-4">
+                  <div className="flex-grow w-full sm:w-auto">
+                    <Label htmlFor="exchange-rate" className="sr-only">Tasa Oficial (VEF/USD)</Label>
+                    <Input
+                      id="exchange-rate"
+                      type="number"
+                      step="0.01"
+                      value={localExchangeRateInput}
+                      onChange={(e) => setLocalExchangeRateInput(e.target.value)}
+                      placeholder="Ej: 36.50"
+                      className="text-center text-lg"
+                    />
+                  </div>
+                  <Button onClick={handleSaveExchangeRate} className="w-full sm:w-auto">
+                    Actualizar Tasa Oficial (VEF/USD)
+                  </Button>
+                </div>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 text-center">
+                  Tasa actual: 1 USD = {exchangeRate.toFixed(2)} VEF
+                </p>
               </div>
 
               <h2 className="text-2xl font-bold mb-4 text-center">Disputas Activas</h2>
