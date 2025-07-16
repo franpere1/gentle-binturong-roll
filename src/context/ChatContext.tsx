@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from "react";
     import { Message, User } from "@/types";
-    import { useAuth } from "./AuthContext";
+    import { useAuth } from "@/context/AuthContext"; // Cambiado de "./AuthContext"
 
     interface ChatContextType {
       messages: Message[];

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from "react";
     import { Contract, User } from "@/types";
-    import { useAuth } from "./AuthContext";
+    import { useAuth } from "@/context/AuthContext"; // Cambiado de "./AuthContext"
     import { useChat } from "./ChatContext";
     import { showSuccess, showError } from "@/utils/toast";
 
