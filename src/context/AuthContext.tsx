@@ -3,7 +3,6 @@ import React, {
   useContext,
   useState,
   ReactNode,
-  useEffect,
   useCallback,
 } from "react";
 import { Client, Provider, User, Feedback, FeedbackType, Admin, ImageSource } from "@/types";
@@ -12,7 +11,7 @@ import { showSuccess, showError } from "@/utils/toast";
 interface AuthContextType {
   currentUser: User | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<boolean>; // Changed return type to boolean
+  login: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
   registerClient: (clientData: Omit<Client, "id" | "createdAt" | "type" | "profileImage"> & { password?: string }) => Promise<boolean>;
   registerProvider: (providerData: Omit<Provider, "id" | "createdAt" | "type" | "feedback" | "starRating" | "profileImage" | "serviceImage"> & { password?: string }) => Promise<boolean>;
@@ -83,27 +82,10 @@ if (inMemoryUsers.length === 0) {
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false); // Inicialmente false, ya que no hay carga automática
 
-  // Simulate initial loading and login as admin
-  useEffect(() => {
-    setIsLoading(true);
-    // Simulate a delay for loading
-    const timer = setTimeout(() => {
-      // Automatically log in the admin user for demonstration
-      const adminUser = inMemoryUsers.find(user => user.email === "admin@admin.com");
-      if (adminUser) {
-        setCurrentUser(adminUser);
-        showSuccess(`Bienvenido, ${adminUser.name}! (Modo Demo)`);
-      } else {
-        // Fallback if admin not found (shouldn't happen with default users)
-        setCurrentUser(null);
-      }
-      setIsLoading(false);
-    }, 500); // Simulate network delay
-
-    return () => clearTimeout(timer);
-  }, []);
+  // Se ha eliminado el useEffect que realizaba el inicio de sesión automático del administrador.
+  // Ahora, el currentUser se establecerá solo a través de las funciones login y register.
 
   const findUserByEmail = useCallback(async (email: string): Promise<User | undefined> => {
     return inMemoryUsers.find(user => user.email === email);
@@ -113,7 +95,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return inMemoryUsers.find(user => user.id === id);
   }, []);
 
-  const login = async (email: string, password: string): Promise<boolean> => { // Updated return type
+  const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     const user = inMemoryUsers.find(u => u.email === email);
 
@@ -124,7 +106,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setCurrentUser(user);
         showSuccess(`Bienvenido, ${user.name}! (Modo Demo)`);
         setIsLoading(false);
-        return true; // Login successful
+        return true;
       } else {
         showError("Credenciales incorrectas.");
       }
@@ -132,7 +114,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       showError("Usuario no encontrado.");
     }
     setIsLoading(false);
-    return false; // Login failed
+    return false;
   };
 
   const logout = async () => {
