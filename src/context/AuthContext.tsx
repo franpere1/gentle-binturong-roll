@@ -4,6 +4,7 @@ import React, {
   useState,
   ReactNode,
   useCallback,
+  useEffect,
 } from "react";
 import { Client, Provider, User, Feedback, FeedbackType, Admin, ImageSource } from "@/types";
 import { showSuccess, showError } from "@/utils/toast";
@@ -32,10 +33,10 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-// In-memory storage for users (simulating a database)
-let inMemoryUsers: (Client | Provider | Admin)[] = [];
+const LOCAL_STORAGE_USERS_KEY = "te_lo_hago_users";
+const LOCAL_STORAGE_CURRENT_USER_ID_KEY = "te_lo_hago_current_user_id";
 
-// Add default users for testing
+// Default users for initial setup
 const defaultAdmin: Admin = {
   id: "admin-123",
   name: "Admin",
@@ -75,17 +76,53 @@ const defaultProvider: Provider = {
   starRating: 4,
 };
 
-// Initialize in-memory users if not already populated (e.g., on first load)
+// Helper to load users from localStorage
+const loadUsersFromLocalStorage = (): (Client | Provider | Admin)[] => {
+  try {
+    const storedUsers = localStorage.getItem(LOCAL_STORAGE_USERS_KEY);
+    if (storedUsers) {
+      return JSON.parse(storedUsers);
+    }
+  } catch (error) {
+    console.error("Error loading users from localStorage:", error);
+  }
+  return [];
+};
+
+// Helper to save users to localStorage
+const saveUsersToLocalStorage = (users: (Client | Provider | Admin)[]) => {
+  try {
+    localStorage.setItem(LOCAL_STORAGE_USERS_KEY, JSON.stringify(users));
+  } catch (error) {
+    console.error("Error saving users to localStorage:", error);
+  }
+};
+
+// Initialize in-memory users (this will be the mutable array)
+let inMemoryUsers: (Client | Provider | Admin)[] = loadUsersFromLocalStorage();
+
+// If no users are loaded, populate with defaults and save
 if (inMemoryUsers.length === 0) {
   inMemoryUsers.push(defaultAdmin, defaultClient, defaultProvider);
+  saveUsersToLocalStorage(inMemoryUsers);
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(false); // Inicialmente false, ya que no hay carga automática
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Se ha eliminado el useEffect que realizaba el inicio de sesión automático del administrador.
-  // Ahora, el currentUser se establecerá solo a través de las funciones login y register.
+  // Load current user from localStorage on initial mount
+  useEffect(() => {
+    const storedUserId = localStorage.getItem(LOCAL_STORAGE_CURRENT_USER_ID_KEY);
+    if (storedUserId) {
+      const user = inMemoryUsers.find(u => u.id === storedUserId);
+      if (user) {
+        setCurrentUser(user);
+        showSuccess(`Bienvenido de nuevo, ${user.name}! (Modo Demo)`);
+      }
+    }
+    setIsLoading(false);
+  }, []);
 
   const findUserByEmail = useCallback(async (email: string): Promise<User | undefined> => {
     return inMemoryUsers.find(user => user.email === email);
@@ -100,10 +137,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const user = inMemoryUsers.find(u => u.email === email);
 
     if (user) {
+      // Simplified password check for demo purposes
       if ((email === "admin@admin.com" && password === "kilmanjaro") ||
           (email === "client@example.com" && password === "password") ||
           (email === "provider@example.com" && password === "password")) {
         setCurrentUser(user);
+        localStorage.setItem(LOCAL_STORAGE_CURRENT_USER_ID_KEY, user.id); // Save current user ID
         showSuccess(`Bienvenido, ${user.name}! (Modo Demo)`);
         setIsLoading(false);
         return true;
@@ -120,6 +159,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = async () => {
     setIsLoading(true);
     setCurrentUser(null);
+    localStorage.removeItem(LOCAL_STORAGE_CURRENT_USER_ID_KEY); // Clear current user ID
     showSuccess("Sesión cerrada correctamente.");
     setIsLoading(false);
   };
@@ -143,7 +183,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       profileImage: null,
     };
     inMemoryUsers.push(newClient);
+    saveUsersToLocalStorage(inMemoryUsers); // Save updated users
     setCurrentUser(newClient);
+    localStorage.setItem(LOCAL_STORAGE_CURRENT_USER_ID_KEY, newClient.id); // Save current user ID
     showSuccess("Registro de cliente exitoso. ¡Ahora estás logeado! (Modo Demo)");
     setIsLoading(false);
     return true;
@@ -175,7 +217,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       profileImage: null,
     };
     inMemoryUsers.push(newProvider);
+    saveUsersToLocalStorage(inMemoryUsers); // Save updated users
     setCurrentUser(newProvider);
+    localStorage.setItem(LOCAL_STORAGE_CURRENT_USER_ID_KEY, newProvider.id); // Save current user ID
     showSuccess("Registro de proveedor exitoso. ¡Ahora estás logeado! (Modo Demo)");
     setIsLoading(false);
     return true;
@@ -186,6 +230,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const index = inMemoryUsers.findIndex(u => u.id === updatedUser.id);
     if (index !== -1) {
       inMemoryUsers[index] = updatedUser as Client | Provider | Admin;
+      saveUsersToLocalStorage(inMemoryUsers); // Save updated users
       setCurrentUser(updatedUser); // Update current user state
       showSuccess("Información actualizada correctamente. (Modo Demo)");
     } else {
@@ -233,6 +278,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
 
     inMemoryUsers[providerIndex] = updatedProvider; // Update in-memory array
+    saveUsersToLocalStorage(inMemoryUsers); // Save updated users
     // If the updated provider is the current user, update currentUser state
     if (currentUser?.id === providerId) {
       setCurrentUser(updatedProvider);
