@@ -4,7 +4,7 @@ import React, { useState, useMemo, useEffect } from "react";
     import { useAuth } from "@/context/AuthContext";
     import { useContracts } from "@/context/ContractContext";
     import { useChat } from "@/context/ChatContext";
-    import { Provider, Contract, Client } from "@/types";
+    import { Provider, Contract, Client, User } from "@/types"; // Import User type
     import { Button } from "@/components/ui/button";
     import {
       Dialog,
@@ -33,7 +33,7 @@ import React, { useState, useMemo, useEffect } from "react";
     const COMMENT_TRUNCATE_LENGTH = 150;
 
     const ProviderDashboard: React.FC = () => {
-      const { currentUser, findUserById, isLoading: authLoading } = useAuth();
+      const { currentUser, findUserById, isLoading: authLoading, getAllUsers } = useAuth(); // Get getAllUsers
       const { getContractsForUser, handleContractAction, makeOffer, contracts } = useContracts();
       const { hasUnreadMessages } = useChat();
       
@@ -53,13 +53,25 @@ import React, { useState, useMemo, useEffect } from "react";
       const [chatContractStatus, setChatContractStatus] = useState<Contract['status'] | 'initial_contact' | undefined>(undefined);
       const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
       const [selectedFeedback, setSelectedFeedback] = useState<{ comment: string; clientName: string; feedbackType: string } | null>(null);
+      const [allUsersMap, setAllUsersMap] = useState<Map<string, User>>(new Map()); // Map to store all users
+
+      // Fetch all users once for displaying names
+      useEffect(() => {
+        const fetchAllUsers = async () => {
+          const users = await getAllUsers();
+          const map = new Map<string, User>();
+          users.forEach(user => map.set(user.id, user));
+          setAllUsersMap(map);
+        };
+        fetchAllUsers();
+      }, [getAllUsers]);
 
       const providerContracts = provider ? getContractsForUser(provider.id) : [];
 
       const displayedContracts = useMemo(() => {
         const lowerCaseSearchTerm = searchTermContracts.toLowerCase();
         let filteredContracts = providerContracts.filter(contract => {
-          const client = findUserById(contract.clientId);
+          const client = allUsersMap.get(contract.clientId); // Use allUsersMap
           const clientName = client ? client.name.toLowerCase() : "";
           return (
             contract.serviceTitle.toLowerCase().includes(lowerCaseSearchTerm) ||
@@ -96,7 +108,7 @@ import React, { useState, useMemo, useEffect } from "react";
         });
 
         return filteredContracts.slice(0, 3);
-      }, [providerContracts, searchTermContracts, findUserById, contracts]);
+      }, [providerContracts, searchTermContracts, allUsersMap, contracts]); // Depend on allUsersMap
 
       const accumulatedEarnings = providerContracts.reduce((total, contract) => {
         if (contract.status === "finalized" || contract.status === "finalized_by_dispute") {
@@ -133,7 +145,7 @@ import React, { useState, useMemo, useEffect } from "react";
       };
 
       const handleChatWithClient = async (contract: Contract) => {
-        const client = await findUserById(contract.clientId) as Client | undefined;
+        const client = allUsersMap.get(contract.clientId) as Client | undefined; // Use allUsersMap
         if (client) {
           setChattingWithClient(client);
           setChatContractStatus(contract.status);
@@ -142,7 +154,7 @@ import React, { useState, useMemo, useEffect } from "react";
       };
 
       const handleViewFeedback = async (comment: string, clientId: string, feedbackType: string) => {
-        const client = await findUserById(clientId) as Client | undefined;
+        const client = allUsersMap.get(clientId) as Client | undefined; // Use allUsersMap
         if (client) {
           setSelectedFeedback({ comment, clientName: client.name, feedbackType });
           setIsFeedbackModalOpen(true);
@@ -330,7 +342,7 @@ import React, { useState, useMemo, useEffect } from "react";
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {displayedContracts.map((contract) => {
-                    const clientUser = findUserById(contract.clientId) as Client | undefined;
+                    const clientUser = allUsersMap.get(contract.clientId) as Client | undefined; // Use allUsersMap
                     const hasNewMessages = clientUser ? hasUnreadMessages(clientUser.id) : false;
 
                     const canProviderMakeOffer = contract.status === "pending" && contract.providerAction === "none";

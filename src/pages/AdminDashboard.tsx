@@ -19,31 +19,23 @@ import React, { useMemo, useState, useEffect } from "react";
     const LOAD_MORE_AMOUNT = 10;
 
     const AdminDashboard: React.FC = () => {
-      const { currentUser, findUserById, getAllProviders, isLoading: authLoading } = useAuth();
+      const { currentUser, getAllUsers, isLoading: authLoading } = useAuth(); // Get getAllUsers
       const { contracts, resolveDispute } = useContracts();
       const [searchTermDisputes, setSearchTermDisputes] = useState("");
       const [activeDisputesLimit, setActiveDisputesLimit] = useState(INITIAL_DISPLAY_LIMIT);
       const [resolvedDisputesLimit, setResolvedDisputesLimit] = useState(INITIAL_DISPLAY_LIMIT);
-      const [allUsers, setAllUsers] = useState<Map<string, Client | Provider | User>>(new Map());
+      const [allUsersMap, setAllUsersMap] = useState<Map<string, User>>(new Map()); // Map to store all users
 
-      // Fetch all users (clients and providers) to display names in contracts
+      // Fetch all users once to display names in contracts
       useEffect(() => {
-        const fetchUsers = async () => {
-          const providers = await getAllProviders();
-          // For clients, we'd need a similar getAllClients function or fetch all users
-          // For simplicity, let's assume findUserById can fetch any user type
-          const usersMap = new Map<string, Client | Provider | User>();
-          providers.forEach(p => usersMap.set(p.id, p));
-          // Add current user if not already there (e.g., admin itself)
-          if (currentUser) {
-            usersMap.set(currentUser.id, currentUser);
-          }
-          // Note: This won't fetch all clients unless explicitly done.
-          // For a full solution, you'd fetch all users or fetch clients on demand.
-          setAllUsers(usersMap);
+        const fetchAllUsers = async () => {
+          const users = await getAllUsers();
+          const map = new Map<string, User>();
+          users.forEach(user => map.set(user.id, user));
+          setAllUsersMap(map);
         };
-        fetchUsers();
-      }, [getAllProviders, currentUser]);
+        fetchAllUsers();
+      }, [getAllUsers]);
 
       // Calculate Held Funds
       const heldFunds = useMemo(() => {
@@ -74,10 +66,10 @@ import React, { useMemo, useState, useEffect } from "react";
         return contracts.filter(contract =>
           (contract.status === "disputed" || contract.status === "finalized_by_dispute") &&
           (contract.serviceTitle.toLowerCase().includes(lowerCaseSearchTerm) ||
-           (allUsers.get(contract.clientId)?.name.toLowerCase() || "").includes(lowerCaseSearchTerm) ||
-           (allUsers.get(contract.providerId)?.name.toLowerCase() || "").includes(lowerCaseSearchTerm))
+           (allUsersMap.get(contract.clientId)?.name.toLowerCase() || "").includes(lowerCaseSearchTerm) ||
+           (allUsersMap.get(contract.providerId)?.name.toLowerCase() || "").includes(lowerCaseSearchTerm))
         );
-      }, [contracts, searchTermDisputes, allUsers]);
+      }, [contracts, searchTermDisputes, allUsersMap]); // Depend on allUsersMap
 
       // Separate and sort for display
       const sortedDisputedContracts = useMemo(() => {
@@ -222,8 +214,8 @@ import React, { useMemo, useState, useEffect } from "react";
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {displayedDisputedContracts.map((contract) => {
-                    const client = allUsers.get(contract.clientId) as Client | undefined;
-                    const provider = allUsers.get(contract.providerId) as Provider | undefined;
+                    const client = allUsersMap.get(contract.clientId) as Client | undefined; // Use allUsersMap
+                    const provider = allUsersMap.get(contract.providerId) as Provider | undefined; // Use allUsersMap
 
                     const amountToProvider = contract.serviceRate * (1 - contract.commissionRate);
                     const commissionAmount = contract.serviceRate * contract.commissionRate;
@@ -291,8 +283,8 @@ import React, { useMemo, useState, useEffect } from "react";
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {displayedResolvedDisputes.map((contract) => {
-                    const client = allUsers.get(contract.clientId) as Client | undefined;
-                    const provider = allUsers.get(contract.providerId) as Provider | undefined;
+                    const client = allUsersMap.get(contract.clientId) as Client | undefined; // Use allUsersMap
+                    const provider = allUsersMap.get(contract.providerId) as Provider | undefined; // Use allUsersMap
 
                     const resolutionText = contract.disputeResolution === 'toClient'
                       ? `Fondos liberados al Cliente ($${contract.serviceRate.toFixed(2)} USD)`

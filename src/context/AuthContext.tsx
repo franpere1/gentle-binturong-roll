@@ -12,7 +12,7 @@ import { showSuccess, showError } from "@/utils/toast";
 interface AuthContextType {
   currentUser: User | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
+  login: (email: string, password: string) => Promise<User | null>; // Changed return type
   logout: () => Promise<void>;
   registerClient: (clientData: Omit<Client, "id" | "createdAt" | "type" | "profileImage"> & { password?: string }) => Promise<boolean>;
   registerProvider: (providerData: Omit<Provider, "id" | "createdAt" | "type" | "feedback" | "starRating" | "profileImage" | "serviceImage"> & { password?: string }) => Promise<boolean>;
@@ -20,6 +20,7 @@ interface AuthContextType {
   findUserById: (id: string) => Promise<User | undefined>;
   updateUser: (user: User) => Promise<void>;
   getAllProviders: () => Promise<Provider[]>;
+  getAllUsers: () => Promise<User[]>; // New function
   addFeedbackToProvider: (
     providerId: string,
     type: FeedbackType,
@@ -136,18 +137,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return users.find(user => user.id === id);
   }, [users]);
 
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const login = async (email: string, password: string): Promise<User | null> => { // Changed return type
     setIsLoading(true);
     const user = users.find(u => u.email === email);
 
     if (user) {
-      // Check password against the stored password for the found user
       if (user.password === password) {
         setCurrentUser(user);
-        localStorage.setItem(LOCAL_STORAGE_CURRENT_USER_ID_KEY, user.id); // Save current user ID
+        localStorage.setItem(LOCAL_STORAGE_CURRENT_USER_ID_KEY, user.id);
         showSuccess(`Bienvenido, ${user.name}! (Modo Demo)`);
         setIsLoading(false);
-        return true; // Login successful
+        return user; // Return the user object on success
       } else {
         showError("Credenciales incorrectas.");
       }
@@ -155,13 +155,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       showError("Usuario no encontrado.");
     }
     setIsLoading(false);
-    return false; // Login failed
+    return null; // Return null on failure
   };
 
   const logout = async () => {
     setIsLoading(true);
     setCurrentUser(null);
-    localStorage.removeItem(LOCAL_STORAGE_CURRENT_USER_ID_KEY); // Clear current user ID
+    localStorage.removeItem(LOCAL_STORAGE_CURRENT_USER_ID_KEY);
     showSuccess("Sesión cerrada correctamente.");
     setIsLoading(false);
   };
@@ -183,13 +183,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       type: "client",
       createdAt: Date.now(),
       profileImage: null,
-      password: clientData.password, // Store the password
+      password: clientData.password,
     };
     const updatedUsers = [...users, newClient];
-    setUsers(updatedUsers); // Update state
-    saveUsersToLocalStorage(updatedUsers); // Save updated users
+    setUsers(updatedUsers);
+    saveUsersToLocalStorage(updatedUsers);
     setCurrentUser(newClient);
-    localStorage.setItem(LOCAL_STORAGE_CURRENT_USER_ID_KEY, newClient.id); // Save current user ID
+    localStorage.setItem(LOCAL_STORAGE_CURRENT_USER_ID_KEY, newClient.id);
     showSuccess("Registro de cliente exitoso. ¡Ahora estás logeado! (Modo Demo)");
     setIsLoading(false);
     return true;
@@ -219,13 +219,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       starRating: 0,
       createdAt: Date.now(),
       profileImage: null,
-      password: providerData.password, // Store the password
+      password: providerData.password,
     };
     const updatedUsers = [...users, newProvider];
-    setUsers(updatedUsers); // Update state
-    saveUsersToLocalStorage(updatedUsers); // Save updated users
+    setUsers(updatedUsers);
+    saveUsersToLocalStorage(updatedUsers);
     setCurrentUser(newProvider);
-    localStorage.setItem(LOCAL_STORAGE_CURRENT_USER_ID_KEY, newProvider.id); // Save current user ID
+    localStorage.setItem(LOCAL_STORAGE_CURRENT_USER_ID_KEY, newProvider.id);
     showSuccess("Registro de proveedor exitoso. ¡Ahora estás logeado! (Modo Demo)");
     setIsLoading(false);
     return true;
@@ -237,9 +237,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     if (index !== -1) {
       const updatedUsers = [...users];
       updatedUsers[index] = updatedUser as Client | Provider | Admin;
-      setUsers(updatedUsers); // Update state
-      saveUsersToLocalStorage(updatedUsers); // Save updated users
-      setCurrentUser(updatedUser); // Update current user state
+      setUsers(updatedUsers);
+      saveUsersToLocalStorage(updatedUsers);
+      setCurrentUser(updatedUser);
       showSuccess("Información actualizada correctamente. (Modo Demo)");
     } else {
       showError("Error al actualizar la información. Usuario no encontrado. (Modo Demo)");
@@ -249,6 +249,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const getAllProviders = async (): Promise<Provider[]> => {
     return users.filter((user): user is Provider => user.type === "provider");
+  };
+
+  const getAllUsers = async (): Promise<User[]> => { // New function implementation
+    return users;
   };
 
   const addFeedbackToProvider = async (
@@ -286,10 +290,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
 
     const updatedUsers = [...users];
-    updatedUsers[providerIndex] = updatedProvider; // Update in-memory array
-    setUsers(updatedUsers); // Update state
-    saveUsersToLocalStorage(updatedUsers); // Save updated users
-    // If the updated provider is the current user, update currentUser state
+    updatedUsers[providerIndex] = updatedProvider;
+    setUsers(updatedUsers);
+    saveUsersToLocalStorage(updatedUsers);
     if (currentUser?.id === providerId) {
       setCurrentUser(updatedProvider);
     }
@@ -308,6 +311,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         findUserById,
         updateUser,
         getAllProviders,
+        getAllUsers, // Added to context value
         addFeedbackToProvider,
       }}
     >
