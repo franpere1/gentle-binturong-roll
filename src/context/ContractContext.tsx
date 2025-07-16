@@ -29,6 +29,75 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useCa
 
     const LOCAL_STORAGE_CONTRACTS_KEY = "te_lo_hago_contracts";
 
+    // IDs de usuarios de demostración del AuthContext
+    const DEMO_CLIENT_ID = "client-456";
+    const DEMO_PROVIDER_ID = "provider-789";
+    const DEMO_ADMIN_ID = "admin-123"; // Aunque el admin no tiene contratos, es bueno tenerlo referenciado
+
+    // Contratos de demostración para poblar el dashboard del admin
+    const defaultContracts: Contract[] = [
+      {
+        id: "contract-demo-1",
+        clientId: DEMO_CLIENT_ID,
+        providerId: DEMO_PROVIDER_ID,
+        serviceTitle: "Reparación de Fuga de Agua",
+        serviceRate: 75.00,
+        status: "finalized", // Para comisiones obtenidas
+        clientDeposited: true,
+        clientAction: "finalize",
+        providerAction: "finalize",
+        commissionRate: 0.10,
+        createdAt: Date.now() - 500000,
+        updatedAt: Date.now() - 400000,
+        disputeResolution: undefined,
+      },
+      {
+        id: "contract-demo-2",
+        clientId: DEMO_CLIENT_ID,
+        providerId: DEMO_PROVIDER_ID,
+        serviceTitle: "Instalación de Lámpara",
+        serviceRate: 40.00,
+        status: "active", // Para fondos retenidos
+        clientDeposited: true,
+        clientAction: "accept_offer",
+        providerAction: "none",
+        commissionRate: 0.10,
+        createdAt: Date.now() - 300000,
+        updatedAt: Date.now() - 200000,
+        disputeResolution: undefined,
+      },
+      {
+        id: "contract-demo-3",
+        clientId: DEMO_CLIENT_ID,
+        providerId: DEMO_PROVIDER_ID,
+        serviceTitle: "Mantenimiento de Jardín",
+        serviceRate: 60.00,
+        status: "disputed", // Para fondos retenidos y disputas activas
+        clientDeposited: true,
+        clientAction: "dispute",
+        providerAction: "finalize", // Proveedor finalizó, cliente disputó
+        commissionRate: 0.10,
+        createdAt: Date.now() - 150000,
+        updatedAt: Date.now() - 100000,
+        disputeResolution: undefined,
+      },
+      {
+        id: "contract-demo-4",
+        clientId: DEMO_CLIENT_ID,
+        providerId: DEMO_PROVIDER_ID,
+        serviceTitle: "Clase de Guitarra",
+        serviceRate: 30.00,
+        status: "finalized_by_dispute", // Para disputas resueltas
+        clientDeposited: true,
+        clientAction: "dispute",
+        providerAction: "finalize",
+        commissionRate: 0.10,
+        createdAt: Date.now() - 700000,
+        updatedAt: Date.now() - 600000,
+        disputeResolution: "toProvider", // Resuelta a favor del proveedor
+      },
+    ];
+
     // Helper to load contracts from localStorage
     const loadContractsFromLocalStorage = (): Contract[] => {
       try {
@@ -54,8 +123,27 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useCa
     export const ContractProvider: React.FC<ContractProviderProps> = ({ children }) => {
       const { currentUser } = useAuth();
       const { clearConversationMessages } = useChat();
-      // Initialize contracts state with data from localStorage
-      const [contracts, setContracts] = useState<Contract[]>(() => loadContractsFromLocalStorage());
+      // Initialize contracts state with data from localStorage or defaults
+      const [contracts, setContracts] = useState<Contract[]>(() => {
+        let initialContracts = loadContractsFromLocalStorage();
+        
+        // Create a map to track existing contracts by ID to avoid duplicates
+        const existingContractMap = new Map<string, Contract>(
+          initialContracts.map(contract => [contract.id, contract])
+        );
+
+        // Add default contracts if they don't already exist in the loaded data
+        defaultContracts.forEach(defaultContract => {
+          if (!existingContractMap.has(defaultContract.id)) {
+            existingContractMap.set(defaultContract.id, defaultContract);
+          }
+        });
+
+        // Convert map back to array
+        const finalContracts = Array.from(existingContractMap.values());
+        saveContractsToLocalStorage(finalContracts); // Save the merged list
+        return finalContracts;
+      });
 
       // Function to update contracts state and save to localStorage
       const updateAndSaveContracts = useCallback((newContracts: Contract[]) => {
@@ -90,7 +178,11 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useCa
         serviceTitle: string,
         serviceRate: number
       ): Promise<Contract | null> => {
-        if (!currentUser || currentUser.id !== clientId) {
+        if (!currentUser) {
+          showError("Debes iniciar sesión para crear un contrato.");
+          return null;
+        }
+        if (currentUser.id !== clientId) {
           showError("Solo el cliente puede crear un contrato.");
           return null;
         }
@@ -147,7 +239,7 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useCa
 
         const newContracts = [...contracts]; // Create a new array
         newContracts[contractIndex] = updatedContract;
-        updateAndSaveContracts(newContracts); // Use updateAndSaveContracts
+        updateAndSaveContracts(newContracts); // Use updateAndSaveMessages
         showSuccess(`Oferta de $${newRate.toFixed(2)} USD enviada para el servicio "${contract.serviceTitle}". (Modo Demo)`);
       };
 
@@ -179,7 +271,7 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useCa
 
         const newContracts = [...contracts]; // Create a new array
         newContracts[contractIndex] = updatedContract;
-        updateAndSaveContracts(newContracts); // Use updateAndSaveContracts
+        updateAndSaveContracts(newContracts); // Use updateAndSaveMessages
         showSuccess(`Fondos depositados para el servicio "${contract.serviceTitle}". El proveedor ha sido notificado. (Modo Demo)`);
         return true;
       };
@@ -372,7 +464,7 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useCa
 
         const newContracts = [...contracts];
         newContracts[contractIndex] = updatedContract;
-        updateAndSaveContracts(newContracts); // Use updateAndSaveContracts
+        updateAndSaveContracts(newContracts); // Use updateAndSaveMessages
       };
 
       const resolveDispute = async (contractId: string, resolutionType: 'toClient' | 'toProvider') => {
@@ -407,7 +499,7 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useCa
 
         const newContracts = [...contracts];
         newContracts[contractIndex] = updatedContract;
-        updateAndSaveContracts(newContracts); // Use updateAndSaveContracts
+        updateAndSaveContracts(newContracts); // Use updateAndSaveMessages
         showSuccess(message);
         await clearConversationMessages(contract.clientId, contract.providerId);
       };
